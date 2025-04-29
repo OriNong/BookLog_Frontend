@@ -1,9 +1,7 @@
 <template>
-    <div>
-        <h1>MainPage</h1>
-    </div>
+    <HeaderBar />
 </template>
 
-<script>
-
+<script setup>
+import HeaderBar from '@/layouts/HeaderBar.vue'
 </script>
