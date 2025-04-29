@@ -6,7 +6,6 @@
 
             <!-- 좌측 로고 -->
             <v-btn to="/" variant="text" class="logo-btn" height="56" width="56">
-                <!-- 로고 이미지 경로 교체 -->
                 <v-img :src="logo" alt="BOOKLOG 로고" height="56" width="56" cover />
             </v-btn>
 
@@ -25,7 +24,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import logo from '@/assets/logo.png'   // 로고 파일 경로
+import logo from '@/assets/logo.png'   
 
 const keyword = ref('')
 const router = useRouter()
