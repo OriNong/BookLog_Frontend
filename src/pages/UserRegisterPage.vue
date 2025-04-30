@@ -1,407 +1,304 @@
 <template>
-    <div class="register-container">
-        <h2>회원가입</h2>
-        <form @submit.prevent="register">
-            <!-- 이메일 입력 -->
-            <InputValidation v-model="email" id="email" label="이메일" type="email" :validate="validators.email"
-                :showCheckButton="true" :isChecked="isEmailVerified" @check="checkEmailDuplicate"
-                @input="handleEmailChange" required />
+    <v-container>
+        <v-row justify="center">
+            <v-col cols="12" md="8" lg="6">
+                <v-card class="pa-4">
+                    <v-card-title class="text-center">회원가입</v-card-title>
 
-            <!-- 인증코드 입력 영역 - 인증 완료 시 숨김 처리 -->
-            <div v-if="verificationSent && !isEmailVerified">
-                <div class="verification-field">
-                    <label for="code">인증 코드</label>
-                    <div class="code-input-group">
-                        <input id="code" v-model="verificationCode" type="text" />
-                        <button type="button" @click="verifyCode" :disabled="!verificationCode">
-                            인증 확인
-                        </button>
-                        <button type="button" @click="sendVerificationCode">
-                            재발송
-                        </button>
-                    </div>
-                </div>
-                <p v-if="codeMessage" :class="{ 'error': codeError, 'success': !codeError }">
-                    {{ codeMessage }}
-                </p>
-            </div>
+                    <v-form ref="form" v-model="isFormValid" @submit.prevent="submitForm">
+                        <!-- 이메일 입력 -->
+                        <v-text-field v-model="email" label="이메일" :rules="emailRules" variant="outlined" required
+                            @input="resetEmailVerification"></v-text-field>
 
-            <!-- 인증 완료 메시지 표시 - 인증 완료시에만 표시 -->
-            <div v-if="isEmailVerified" class="verified-message">
-                <p class="success">이메일 인증이 완료되었습니다.</p>
-            </div>
+                        <v-btn color="primary" :disabled="!isEmailValid || isEmailChecking" :loading="isEmailChecking"
+                            @click="checkEmailAvailability" class="mb-4" block>
+                            이메일 중복 확인
+                        </v-btn>
 
-            <!-- 비밀번호 입력 -->
-            <InputValidation v-model="password" id="password" label="비밀번호" type="password"
-                :validate="validators.password" @input="checkConfirmPassword" required />
+                        <!-- 이메일 검증 코드 영역 -->
+                        <div v-if="showVerificationCode">
+                            <v-text-field v-model="verificationCode" label="인증 코드" variant="outlined"
+                                :rules="[v => !!v || '인증 코드를 입력해주세요']" required></v-text-field>
 
-            <!-- 비밀번호 확인 -->
-            <InputValidation v-model="confirmPassword" id="confirmPassword" label="비밀번호 확인" type="password"
-                :validate="validators.confirmPassword" required />
+                            <v-btn color="success" :disabled="!verificationCode || isVerifying" :loading="isVerifying"
+                                @click="verifyEmail" class="mb-4" block>
+                                인증 코드 확인
+                            </v-btn>
+                        </div>
 
-            <!-- 닉네임 입력 -->
-            <InputValidation v-model="nickname" id="nickname" label="닉네임" :validate="validators.nickname"
-                :showCheckButton="true" :isChecked="isNicknameChecked" @check="checkNicknameDuplicate"
-                @input="handleNicknameChange" required />
+                        <!-- 닉네임 입력 -->
+                        <v-text-field v-model="nickname" label="닉네임" :rules="nicknameRules" variant="outlined" required
+                            @input="resetNicknameCheck"></v-text-field>
 
-            <button type="submit" :disabled="!isFormValid">회원가입</button>
-        </form>
-        <p v-if="statusMessage" :class="{ 'error': statusError, 'success': !statusError }">
-            {{ statusMessage }}
-        </p>
-    </div>
+                        <v-btn color="primary" :disabled="!isNicknameValid || isNicknameChecking"
+                            :loading="isNicknameChecking" @click="checkNicknameAvailability" class="mb-4" block>
+                            닉네임 중복 확인
+                        </v-btn>
+
+                        <!-- 비밀번호 입력 -->
+                        <v-text-field v-model="password" label="비밀번호" :rules="passwordRules" variant="outlined"
+                            type="password" required></v-text-field>
+
+                        <!-- 비밀번호 확인 -->
+                        <v-text-field v-model="confirmPassword" label="비밀번호 확인" :rules="confirmPasswordRules"
+                            variant="outlined" type="password" required></v-text-field>
+
+                        <!-- 제출 버튼 -->
+                        <v-btn color="success" type="submit" :disabled="!canSubmit" :loading="isSubmitting" block
+                            class="mt-4">
+                            회원가입
+                        </v-btn>
+                    </v-form>
+
+                    <!-- 알림 메시지 -->
+                    <v-snackbar v-model="snackbar" :color="snackbarColor">
+                        {{ snackbarText }}
+                        <template v-slot:actions>
+                            <v-btn variant="text" @click="snackbar = false">닫기</v-btn>
+                        </template>
+                    </v-snackbar>
+                </v-card>
+            </v-col>
+        </v-row>
+    </v-container>
 </template>
 
 <script setup>
-import { ref, inject, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import InputValidation from '@/components/auth/InputValidation.vue'
+import { ref, computed, inject } from 'vue';
+import { useRouter } from 'vue-router';
 
+// axios 인스턴스 주입
 const axios = inject('axios');
+const router = useRouter();
 
-const email = ref('')
-const password = ref('')
-const confirmPassword = ref('')
-const nickname = ref('')
-const verificationCode = ref('')
-const isEmailVerified = ref(false)
-const verificationSent = ref(false)
-const isNicknameChecked = ref(false)
-const codeMessage = ref('')
-const codeError = ref(false)
-const statusMessage = ref('')
-const statusError = ref(false)
-const router = useRouter()
+// 폼 상태
+const form = ref(null);
+const isFormValid = ref(false);
+const isSubmitting = ref(false);
 
-// 폼 유효성 검사
-const isFormValid = computed(() => {
-    return isEmailVerified.value &&
-        validators.password(password.value).isValid &&
-        validators.confirmPassword(confirmPassword.value).isValid &&
-        validators.nickname(nickname.value).isValid &&
-        isNicknameChecked.value
-})
+// 입력 필드
+const email = ref('');
+const password = ref('');
+const confirmPassword = ref('');
+const nickname = ref('');
+const verificationCode = ref('');
 
-// 유효성 검사 함수들
-const validators = {
-    email: (value) => {
-        const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-        if (!value) {
-            return { isValid: false, message: '' }
-        } else if (emailPattern.test(value)) {
-            return { isValid: true, message: '유효한 이메일 형식입니다.' }
-        } else {
-            return { isValid: false, message: '올바르지 않은 이메일 형식입니다.' }
-        }
-    },
-    password: (value) => {
-        const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,25}$/
-        if (!value) {
-            return { isValid: false, message: '' }
-        } else if (passwordPattern.test(value)) {
-            return { isValid: true, message: '안전한 비밀번호입니다.' }
-        } else {
-            return { isValid: false, message: '8~25자리이며, 숫자, 문자, 특수문자를 모두 포함해야 합니다.' }
-        }
-    },
-    confirmPassword: (value) => {
-        if (!value) {
-            return { isValid: false, message: '' }
-        } else if (password.value === value) {
-            return { isValid: true, message: '비밀번호가 일치합니다.' }
-        } else {
-            return { isValid: false, message: '비밀번호가 일치하지 않습니다.' }
-        }
-    },
-    nickname: (value) => {
-        const nicknamePattern = /^[가-힣a-zA-Z][가-힣a-zA-Z0-9]{1,11}$/
-        if (!value) {
-            return { isValid: false, message: '' }
-        } else if (nicknamePattern.test(value)) {
-            return { isValid: true, message: '사용 가능한 닉네임 형식입니다.' }
-        } else {
-            return { isValid: false, message: '숫자로 시작 불가, 2~12자의 한글, 영문, 숫자 조합이 가능합니다' }
-        }
-    }
-}
+// 검증 상태
+const isEmailValid = computed(() => {
+    return email.value && emailRegex.test(email.value);
+});
+const isNicknameValid = computed(() => {
+    return nickname.value && nicknameRegex.test(nickname.value);
+});
+const isPasswordValid = computed(() => {
+    return password.value && passwordRegex.test(password.value);
+});
 
-// 이메일 변경 처리
-const handleEmailChange = () => {
-    // 이메일이 변경되면 인증 상태 초기화
-    if (isEmailVerified.value) {
-        isEmailVerified.value = false
-        verificationSent.value = false
-        verificationCode.value = ''
-        codeMessage.value = ''
-    }
-}
+// 이메일 검증 상태
+const isEmailChecked = ref(false);
+const isEmailChecking = ref(false);
+const showVerificationCode = ref(false);
+const isEmailVerified = ref(false);
+const isVerifying = ref(false);
 
-// 닉네임 변경 처리
-const handleNicknameChange = () => {
-    // 닉네임이 변경되면 중복 확인 상태 초기화
-    if (isNicknameChecked.value) {
-        isNicknameChecked.value = false
-    }
-}
+// 닉네임 검증 상태
+const isNicknameChecked = ref(false);
+const isNicknameChecking = ref(false);
 
-// 비밀번호 변경 시 확인 비밀번호 유효성 재검사
-const checkConfirmPassword = () => {
-    if (confirmPassword.value) {
-        validators.confirmPassword(confirmPassword.value)
-    }
-}
+// 알림 메시지
+const snackbar = ref(false);
+const snackbarText = ref('');
+const snackbarColor = ref('');
 
-// 상태 메시지 설정 함수
-const setStatusMessage = (message, isError = false) => {
-    statusMessage.value = message
-    statusError.value = isError
-    // 5초 후 메시지 자동 삭제
-    if (message) {
-        setTimeout(() => {
-            statusMessage.value = ''
-        }, 5000)
-    }
-}
+// 정규식 패턴
+const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,20}$/;
+const nicknameRegex = /^[^0-9][가-힣a-zA-Z0-9]{1,9}$/;
 
-// 이메일 중복 체크
-const checkEmailDuplicate = async () => {
-    // 이메일 형식 검증
-    if (!validators.email(email.value).isValid) {
-        setStatusMessage('유효한 이메일 형식을 입력해주세요.', true)
-        return
-    }
+// 유효성 검사 규칙
+const emailRules = [
+    v => !!v || '이메일을 입력해주세요',
+    v => emailRegex.test(v) || '유효한 이메일 형식이 아닙니다',
+];
 
+const passwordRules = [
+    v => !!v || '비밀번호를 입력해주세요',
+    v => passwordRegex.test(v) || '비밀번호는 8~20자의 문자와 숫자 조합이어야 합니다',
+];
+
+const confirmPasswordRules = [
+    v => !!v || '비밀번호 확인을 입력해주세요',
+    v => v === password.value || '비밀번호가 일치하지 않습니다',
+];
+
+const nicknameRules = [
+    v => !!v || '닉네임을 입력해주세요',
+    v => nicknameRegex.test(v) || '닉네임은 숫자로 시작할 수 없으며, 한글/영문/숫자 조합으로 2~10자이어야 합니다',
+];
+
+// 제출 가능 여부 계산
+const canSubmit = computed(() => {
+    return isFormValid.value && isEmailChecked.value && isEmailVerified.value &&
+        isNicknameChecked.value && isPasswordValid.value;
+});
+
+// 이메일 중복 확인
+async function checkEmailAvailability() {
+    if (!isEmailValid.value) return;
+
+    isEmailChecking.value = true;
     try {
-        const res = await axios.post(
-            '/api/auth/check-email',
-            null,
-            { params: { email: email.value } }
-        )
+        const response = await axios.post('/api/auth/check-email', null, {
+            params: { email: email.value }
+        });
 
-        if (res.data && res.data.success) {
-            setStatusMessage('사용 가능한 이메일입니다.', false)
-            await sendVerificationCode()
+        if (response.data.success === true) {
+            // 이메일 사용 가능
+            isEmailChecked.value = true;
+            showNotification('사용 가능한 이메일입니다. 인증을 진행해주세요.', 'success');
+            // 인증 코드 전송 및 인증 코드 입력 영역 표시
+            sendVerificationCode();
         } else {
-            setStatusMessage(res.data.message || '이미 사용 중인 이메일입니다.', true)
-            isEmailVerified.value = false
+            // 이메일 이미 사용 중
+            isEmailChecked.value = false;
+            showNotification('이미 사용 중인 이메일입니다.', 'error');
         }
-    } catch (e) {
-        setStatusMessage('중복 확인 과정에서 오류가 발생했습니다.', true)
+    } catch (error) {
+        console.error('이메일 중복 확인 오류:', error);
+        showNotification('이메일 확인 중 오류가 발생했습니다.', 'error');
+    } finally {
+        isEmailChecking.value = false;
     }
 }
 
-// 닉네임 중복 체크
-const checkNicknameDuplicate = async () => {
-    // 닉네임 형식 검증
-    if (!validators.nickname(nickname.value).isValid) {
-        setStatusMessage('유효한 닉네임 형식을 입력해주세요.', true)
-        return
-    }
-
+// 인증 코드 전송
+async function sendVerificationCode() {
     try {
-        const res = await axios.post(
-            '/api/auth/check-nickname',
-            null,
-            { params: { nickname: nickname.value } }
-        )
-
-        if (res.data && res.data.success) {
-            setStatusMessage('사용 가능한 닉네임입니다.', false)
-            isNicknameChecked.value = true
-        } else {
-            setStatusMessage(res.data.message || '이미 사용 중인 닉네임입니다.', true)
-            isNicknameChecked.value = false
-        }
-    } catch (e) {
-        setStatusMessage('닉네임 중복 확인 중 오류 발생', true)
-        isNicknameChecked.value = false
+        await axios.post('/api/auth/send-email', { email: email.value });
+        showVerificationCode.value = true;
+        showNotification('인증 코드가 이메일로 전송되었습니다.', 'info');
+    } catch (error) {
+        console.error('인증 코드 전송 오류:', error);
+        showNotification('인증 코드 전송 중 오류가 발생했습니다.', 'error');
     }
 }
 
-// 인증 코드 발송
-const sendVerificationCode = async () => {
+// 이메일 인증 코드 확인
+async function verifyEmail() {
+    if (!verificationCode.value) return;
+
+    isVerifying.value = true;
     try {
-        const res = await axios.post(
-            '/api/auth/send-email', {
-            email: email.value
-        }
-        )
-
-        if (res.data && res.data.success) {
-            verificationSent.value = true
-            codeMessage.value = '인증 코드가 발송되었습니다. 이메일을 확인해주세요.'
-            codeError.value = false
-        } else {
-            codeMessage.value = res.data.message || '인증 코드 발송에 실패했습니다.'
-            codeError.value = true
-        }
-    } catch (err) {
-        codeMessage.value = '인증 코드 발송에 실패했습니다.'
-        codeError.value = true
-    }
-}
-
-// 인증 코드 확인
-const verifyCode = async () => {
-    if (!verificationCode.value) {
-        codeMessage.value = '인증 코드를 입력해주세요.'
-        codeError.value = true
-        return
-    }
-
-    try {
-        const res = await axios.post(
-            '/api/auth/verify-email', {
+        const response = await axios.post('/api/auth/verify-email', {
             email: email.value,
             code: verificationCode.value
-        }
-        )
+        });
 
-        if (res.data && res.data.success) {
-            isEmailVerified.value = true
-            // 인증 완료 시 인증 코드 입력 영역이 자동으로 숨겨짐 (v-if 조건 때문에)
-            setStatusMessage('이메일 인증이 완료되었습니다.', false)
+        if (response.data && response.data.verified === true) {
+            isEmailVerified.value = true;
+            showVerificationCode.value = false;
+            showNotification('이메일 인증이 완료되었습니다.', 'success');
         } else {
-            codeMessage.value = res.data.message || '인증 코드가 올바르지 않거나 만료되었습니다.'
-            codeError.value = true
+            isEmailVerified.value = false;
+            showNotification('인증 코드가 일치하지 않습니다.', 'error');
         }
-    } catch (err) {
-        codeMessage.value = '인증 코드가 올바르지 않거나 만료되었습니다.'
-        codeError.value = true
+    } catch (error) {
+        console.error('이메일 인증 오류:', error);
+        showNotification('이메일 인증 중 오류가 발생했습니다.', 'error');
+    } finally {
+        isVerifying.value = false;
     }
 }
 
-// 회원가입
-const register = async () => {
-    // 이메일 검증
-    if (!isEmailVerified.value) {
-        setStatusMessage('이메일 인증을 완료해주세요.', true)
-        return
-    }
+// 닉네임 중복 확인
+async function checkNicknameAvailability() {
+    if (!isNicknameValid.value) return;
 
-    // 비밀번호 검증
-    if (!validators.password(password.value).isValid) {
-        setStatusMessage('비밀번호 형식이 올바르지 않습니다.', true)
-        return
-    }
-
-    // 비밀번호 확인 검증
-    if (!validators.confirmPassword(confirmPassword.value).isValid) {
-        setStatusMessage('비밀번호가 일치하지 않습니다.', true)
-        return
-    }
-
-    // 닉네임 검증
-    if (!validators.nickname(nickname.value).isValid) {
-        setStatusMessage('닉네임 형식이 올바르지 않습니다.', true)
-        return
-    }
-
-    // 닉네임 중복 확인 검증
-    if (!isNicknameChecked.value) {
-        setStatusMessage('닉네임 중복 확인을 해주세요.', true)
-        return
-    }
-
+    isNicknameChecking.value = true;
     try {
-        const res = await axios.post('/api/auth/register', {
+        const response = await axios.post('/api/auth/check-nickname', null, {
+            params: { nickname: nickname.value }
+        });
+
+        if (response.data.success === true) {
+            // 닉네임 사용 가능
+            isNicknameChecked.value = true;
+            showNotification('사용 가능한 닉네임입니다.', 'success');
+        } else {
+            // 닉네임 이미 사용 중
+            isNicknameChecked.value = false;
+            showNotification('이미 사용 중인 닉네임입니다.', 'error');
+        }
+    } catch (error) {
+        console.error('닉네임 중복 확인 오류:', error);
+        showNotification('닉네임 확인 중 오류가 발생했습니다.', 'error');
+    } finally {
+        isNicknameChecking.value = false;
+    }
+}
+
+// 이메일 검증 초기화
+function resetEmailVerification() {
+    isEmailChecked.value = false;
+    isEmailVerified.value = false;
+    showVerificationCode.value = false;
+    verificationCode.value = '';
+}
+
+// 닉네임 중복 확인 초기화
+function resetNicknameCheck() {
+    isNicknameChecked.value = false;
+}
+
+// 폼 제출
+async function submitForm() {
+    if (!canSubmit.value) return;
+
+    isSubmitting.value = true;
+    try {
+        // 회원가입 API 호출 - UserVO 형식에 맞게 데이터 전송
+        const response = await axios.post('/api/auth/register', {
             email: email.value,
             password: password.value,
             nickname: nickname.value
-        })
+        });
 
-        if (res.data && res.data.success) {
-            setStatusMessage('회원가입이 완료되었습니다! 로그인 페이지로 이동합니다.', false)
-            setTimeout(() => {
-                router.push('/login')
-            }, 1500)
-        } else {
-            setStatusMessage(res.data.message || '회원가입에 실패했습니다.', true)
+        if (response.status === 200) {
+            showNotification('회원가입이 완료되었습니다!', 'success');
+            router.push('/login');
+
+            // 폼 초기화
+            resetForm();
         }
-    } catch (err) {
-        setStatusMessage('회원가입에 실패했습니다.', true)
+    } catch (error) {
+        console.error('회원가입 오류:', error);
+        const errorMessage = error.response?.data || '회원가입 중 오류가 발생했습니다.';
+        showNotification(errorMessage, 'error');
+    } finally {
+        isSubmitting.value = false;
+    }
+}
+
+// 알림 메시지 표시
+function showNotification(text, color) {
+    snackbarText.value = text;
+    snackbarColor.value = color;
+    snackbar.value = true;
+}
+
+// 폼 리셋
+function resetForm() {
+    email.value = '';
+    password.value = '';
+    confirmPassword.value = '';
+    nickname.value = '';
+    verificationCode.value = '';
+
+    resetEmailVerification();
+    resetNicknameCheck();
+
+    if (form.value) {
+        form.value.resetValidation();
     }
 }
 </script>
-
-<style scoped>
-.register-container {
-    max-width: 450px;
-    margin: 50px auto;
-    padding: 1.5rem;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-h2 {
-    text-align: center;
-    margin-bottom: 2rem;
-    color: #333;
-}
-
-.verification-field {
-    margin-bottom: 1rem;
-}
-
-.code-input-group {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-.code-input-group input {
-    flex: 1;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-button {
-    padding: 8px 12px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-button:hover:not(:disabled) {
-    background-color: #45a049;
-}
-
-button:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-}
-
-button[type="submit"] {
-    width: 100%;
-    padding: 10px;
-    margin-top: 1rem;
-    font-size: 1rem;
-}
-
-.error {
-    color: #d32f2f;
-    text-align: center;
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.success {
-    color: #388e3c;
-    text-align: center;
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.verified-message {
-    margin: 0.5rem 0;
-    padding: 0.5rem;
-    background-color: #e8f5e9;
-    border-radius: 4px;
-    border-left: 4px solid #388e3c;
-}
-</style>

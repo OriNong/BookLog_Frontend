@@ -30,9 +30,9 @@ const keyword = ref('')
 const router = useRouter()
 
 function onSearch() {
-    const q = keyword.value.trim()
-    if (!q) return
-    router.push({ name: 'Search', query: { q } })
+    const query = keyword.value.trim()
+    if (!query) return
+    router.push({ name: 'Search', query: { query } })
 }
 </script>
 

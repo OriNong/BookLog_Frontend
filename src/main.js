@@ -6,7 +6,7 @@ import { createPinia } from 'pinia'
 import axios from 'axios'
 
 /* Vuetify 플러그인 */
-import vuetify from './plugins/vuetify'   // ← ① 방금 확인한 파일
+import vuetify from './plugins/vuetify'  
 
 /* axios 인스턴스 */
 const axiosInstance = axios.create({
@@ -20,6 +20,6 @@ const app = createApp(App)
 app
   .use(router)
   .use(createPinia())
-  .use(vuetify)                           // ← ② 반드시 등록
+  .use(vuetify)                           
   .provide('axios', axiosInstance)
   .mount('#app')

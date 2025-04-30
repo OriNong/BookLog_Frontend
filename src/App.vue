@@ -1,11 +1,29 @@
-<!-- src/App.vue -->
 <template>
-  <!-- Vuetify는 v-app을 최상위에서 한 번만 두면 됩니다 -->
   <v-app>
-    <router-view /> <!-- 페이지 컴포넌트 -->
+    <HeaderBar v-if="showHeader" />
+    <div :class="{ 'with-header': showHeader }">
+      <router-view />
+    </div>
+
   </v-app>
 </template>
 
 <script setup>
-// 특별한 코드 없음 (v-app 안에 router-view만 두면 OK)
+import HeaderBar from '@/layouts/HeaderBar.vue'
+import { useRoute } from 'vue-router'
+import { computed } from 'vue'
+
+const route = useRoute()
+
+// 경로에 따라 헤더 표시 여부 결정
+const showHeader = computed(() => {
+  return route.name !== 'Login' && route.name !== 'Register' && route.name !== 'BookDetail'
+})
 </script>
+
+<style scoped>
+.with-header {
+  margin-top: 72px;
+  /* HeaderBar.vue의 v-app-bar height 값과 동일하게 */
+}
+</style>

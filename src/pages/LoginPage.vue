@@ -1,34 +1,42 @@
 <template>
-    <div class="login-container">
-        <h1>BookLog</h1>
-        <h2>로그인</h2>
-        <div v-if="error" class="error-message">{{ error }}</div>
+    <!-- 화면 가운데 카드 형태로 배치 -->
+    <v-container class="fill-height d-flex align-center justify-center">
+        <v-card width="420" elevation="8" rounded="lg">
+            <!-- 로고 / 타이틀 -->
+            <v-card-title class="text-h4 text-center py-6">BookLog</v-card-title>
+            <v-card-subtitle class="text-center pb-4">로그인</v-card-subtitle>
 
-        <form @submit.prevent="handleLogin">
-            <div class="form-group">
-                <label for="email">이메일</label>
-                <input type="text" id="email" v-model="email" required />
-            </div>
+            <v-card-text>
+                <!-- 오류 메시지 -->
+                <v-alert v-if="error" type="error" variant="outlined" class="mb-4" density="comfortable">
+                    {{ error }}
+                </v-alert>
 
-            <div class="form-group">
-                <label for="password">비밀번호</label>
-                <input type="password" id="password" v-model="password" required />
-            </div>
+                <!-- 로그인 폼 -->
+                <v-form @submit.prevent="handleLogin">
+                    <v-text-field v-model="email" label="이메일" type="email" prepend-inner-icon="mdi-email"
+                        autocomplete="username" density="comfortable" required />
 
-            <button type="submit" :disabled="loading">
-                {{ loading ? '로그인 중...' : '로그인' }}
-            </button>
+                    <v-text-field v-model="password" label="비밀번호" type="password" prepend-inner-icon="mdi-lock"
+                        autocomplete="current-password" density="comfortable" required class="mt-3" />
 
-            <div class="findPassword-link">
-                <router-link to="/findPassword">비밀번호 찾기</router-link>
-            </div>
+                    <v-btn block class="mt-6" color="primary" type="submit" :loading="loading" :disabled="loading">
+                        로그인
+                    </v-btn>
+                </v-form>
 
-            <div class="register-link">
-                계정이 없으신가요? <router-link to="/register">회원가입</router-link>
-            </div>
-
-        </form>
-    </div>
+                <!-- 링크 영역 -->
+                <div class="d-flex justify-space-between mt-6">
+                    <RouterLink to="/findPassword" class="text-subtitle-2">
+                        비밀번호 찾기
+                    </RouterLink>
+                    <RouterLink to="/register" class="text-subtitle-2">
+                        회원가입
+                    </RouterLink>
+                </div>
+            </v-card-text>
+        </v-card>
+    </v-container>
 </template>
 
 <script setup>
