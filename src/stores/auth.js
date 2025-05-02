@@ -35,7 +35,7 @@ export const useAuthStore = defineStore("auth", {
       this.refreshToken = refreshToken;
       this.isAuthenticated = true;
 
-      // 쿠키에 저장 (필요에 따라 만료 시간 설정)
+      // 쿠키에 저장 
       Cookies.set("accessToken", accessToken, { expires: 1 / 24 }); // 1시간
       Cookies.set("refreshToken", refreshToken, { expires: 7 }); // 7일
     },
