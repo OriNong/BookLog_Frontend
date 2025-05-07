@@ -64,11 +64,10 @@
 </template>
 
 <script setup>
-import { ref, computed, inject } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { authService } from '@/services/authService';
 
-// axios 인스턴스 주입
-const axios = inject('axios');
 const router = useRouter();
 
 // 폼 상태
@@ -84,15 +83,9 @@ const nickname = ref('');
 const verificationCode = ref('');
 
 // 검증 상태
-const isEmailValid = computed(() => {
-    return email.value && emailRegex.test(email.value);
-});
-const isNicknameValid = computed(() => {
-    return nickname.value && nicknameRegex.test(nickname.value);
-});
-const isPasswordValid = computed(() => {
-    return password.value && passwordRegex.test(password.value);
-});
+const isEmailValid = computed(() => email.value && emailRegex.test(email.value));
+const isNicknameValid = computed(() => nickname.value && nicknameRegex.test(nickname.value));
+const isPasswordValid = computed(() => password.value && passwordRegex.test(password.value));
 
 // 이메일 검증 상태
 const isEmailChecked = ref(false);
@@ -137,10 +130,10 @@ const nicknameRules = [
 ];
 
 // 제출 가능 여부 계산
-const canSubmit = computed(() => {
-    return isFormValid.value && isEmailChecked.value && isEmailVerified.value &&
-        isNicknameChecked.value && isPasswordValid.value;
-});
+const canSubmit = computed(() =>
+    isFormValid.value && isEmailChecked.value && isEmailVerified.value &&
+    isNicknameChecked.value && isPasswordValid.value
+);
 
 // 이메일 중복 확인
 async function checkEmailAvailability() {
@@ -148,23 +141,17 @@ async function checkEmailAvailability() {
 
     isEmailChecking.value = true;
     try {
-        const response = await axios.post('/api/auth/check-email', null, {
-            params: { email: email.value }
-        });
-
-        if (response.data.success === true) {
-            // 이메일 사용 가능
+        const res = await authService.checkEmail(email.value);
+        if (res.success) {
             isEmailChecked.value = true;
             showNotification('사용 가능한 이메일입니다. 인증을 진행해주세요.', 'success');
-            // 인증 코드 전송 및 인증 코드 입력 영역 표시
-            sendVerificationCode();
+            await sendVerificationCode();
         } else {
-            // 이메일 이미 사용 중
             isEmailChecked.value = false;
             showNotification('이미 사용 중인 이메일입니다.', 'error');
         }
-    } catch (error) {
-        console.error('이메일 중복 확인 오류:', error);
+    } catch (err) {
+        console.error(err);
         showNotification('이메일 확인 중 오류가 발생했습니다.', 'error');
     } finally {
         isEmailChecking.value = false;
@@ -174,27 +161,23 @@ async function checkEmailAvailability() {
 // 인증 코드 전송
 async function sendVerificationCode() {
     try {
-        await axios.post('/api/auth/send-email', { email: email.value });
+        await authService.sendVerificationCode(email.value);
         showVerificationCode.value = true;
         showNotification('인증 코드가 이메일로 전송되었습니다.', 'info');
-    } catch (error) {
-        console.error('인증 코드 전송 오류:', error);
+    } catch (err) {
+        console.error(err);
         showNotification('인증 코드 전송 중 오류가 발생했습니다.', 'error');
     }
 }
 
-// 이메일 인증 코드 확인
+// 인증 코드 검증
 async function verifyEmail() {
     if (!verificationCode.value) return;
 
     isVerifying.value = true;
     try {
-        const response = await axios.post('/api/auth/verify-email', {
-            email: email.value,
-            code: verificationCode.value
-        });
-
-        if (response.data && response.data.verified === true) {
+        const res = await authService.verifyEmail(email.value, verificationCode.value);
+        if (res.verified === true) {
             isEmailVerified.value = true;
             showVerificationCode.value = false;
             showNotification('이메일 인증이 완료되었습니다.', 'success');
@@ -202,8 +185,8 @@ async function verifyEmail() {
             isEmailVerified.value = false;
             showNotification('인증 코드가 일치하지 않습니다.', 'error');
         }
-    } catch (error) {
-        console.error('이메일 인증 오류:', error);
+    } catch (err) {
+        console.error(err);
         showNotification('이메일 인증 중 오류가 발생했습니다.', 'error');
     } finally {
         isVerifying.value = false;
@@ -216,28 +199,23 @@ async function checkNicknameAvailability() {
 
     isNicknameChecking.value = true;
     try {
-        const response = await axios.post('/api/auth/check-nickname', null, {
-            params: { nickname: nickname.value }
-        });
-
-        if (response.data.success === true) {
-            // 닉네임 사용 가능
+        const res = await authService.checkNickname(nickname.value);
+        if (res.success) {
             isNicknameChecked.value = true;
             showNotification('사용 가능한 닉네임입니다.', 'success');
         } else {
-            // 닉네임 이미 사용 중
             isNicknameChecked.value = false;
             showNotification('이미 사용 중인 닉네임입니다.', 'error');
         }
-    } catch (error) {
-        console.error('닉네임 중복 확인 오류:', error);
+    } catch (err) {
+        console.error(err);
         showNotification('닉네임 확인 중 오류가 발생했습니다.', 'error');
     } finally {
         isNicknameChecking.value = false;
     }
 }
 
-// 이메일 검증 초기화
+// 이메일 인증 초기화
 function resetEmailVerification() {
     isEmailChecked.value = false;
     isEmailVerified.value = false;
@@ -245,7 +223,7 @@ function resetEmailVerification() {
     verificationCode.value = '';
 }
 
-// 닉네임 중복 확인 초기화
+// 닉네임 중복 초기화
 function resetNicknameCheck() {
     isNicknameChecked.value = false;
 }
@@ -256,20 +234,10 @@ async function submitForm() {
 
     isSubmitting.value = true;
     try {
-        // 회원가입 API 호출 - UserVO 형식에 맞게 데이터 전송
-        const response = await axios.post('/api/auth/register', {
-            email: email.value,
-            password: password.value,
-            nickname: nickname.value
-        });
-
-        if (response.status === 200) {
-            showNotification('회원가입이 완료되었습니다!', 'success');
-            router.push('/login');
-
-            // 폼 초기화
-            resetForm();
-        }
+        await authService.register(email.value, password.value, nickname.value);
+        showNotification('회원가입이 완료되었습니다!', 'success');
+        router.push('/login');
+        resetForm();
     } catch (error) {
         console.error('회원가입 오류:', error);
         const errorMessage = error.response?.data || '회원가입 중 오류가 발생했습니다.';
@@ -279,7 +247,7 @@ async function submitForm() {
     }
 }
 
-// 알림 메시지 표시
+// 알림 메시지
 function showNotification(text, color) {
     snackbarText.value = text;
     snackbarColor.value = color;
@@ -293,12 +261,8 @@ function resetForm() {
     confirmPassword.value = '';
     nickname.value = '';
     verificationCode.value = '';
-
     resetEmailVerification();
     resetNicknameCheck();
-
-    if (form.value) {
-        form.value.resetValidation();
-    }
+    if (form.value) form.value.resetValidation();
 }
 </script>

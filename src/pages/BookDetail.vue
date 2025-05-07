@@ -26,8 +26,19 @@
         </v-row>
 
         <!-- 액션 버튼 -->
-        <v-btn class="me-2" color="primary">읽을 목록에 추가</v-btn>
-        <v-btn color="success">독서 시작</v-btn>
+        <!-- 상태에 따라 버튼 1개만 표시 -->
+        <v-btn v-if="bookcaseStatus === null" class="me-2" color="primary" @click="registerToBookcase">
+          읽을 목록에 추가
+        </v-btn>
+
+        <v-btn v-else-if="bookcaseStatus === 'TO_READ'" color="success" @click="startReading">
+          독서 시작
+        </v-btn>
+
+        <v-btn v-else-if="bookcaseStatus === 'READING'" color="warning" @click="finishReading">
+          독서 완료
+        </v-btn>
+
       </v-col>
     </v-row>
 
@@ -69,28 +80,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted, inject } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { bookService } from '@/services/bookService';
+import { bookcaseService } from '@/services/bookcaseService';
 
-const axios = inject('axios')
+/* --- 라우트 및 기본 상태 --- */
+const route = useRoute();
+const isbn = route.params.isbn;
 
-const route = useRoute()
-const isbn = route.params.isbn
+const book = ref({});
+const bookcaseStatus = ref(null); // TO_READ, READING, COMPLETE, null
+const reviewSort = ref('date');
 
-const book = ref({})
-const reviewSort = ref('date')
-
-// 도서 정보 조회
-onMounted(async () => {
-  try {
-    const { data } = await axios.get(`/api/books/${isbn}`)
-    book.value = data
-  } catch (e) {
-    console.error('도서 정보를 불러오지 못했습니다', e)
-  }
-})
-
-// 더미 리뷰 목록
+/* --- 더미 리뷰 데이터 (추후 API 연결 예정) --- */
 const reviews = ref([
   {
     id: 1,
@@ -108,8 +111,73 @@ const reviews = ref([
     likes: 3,
     date: '2024-09-19'
   }
-])
+]);
+
+/* --- 도서 상세 및 상태 조회 --- */
+const fetchBookDetail = async () => {
+  try {
+    const { data } = await bookService.getBookDetail(isbn);
+    book.value = data;
+
+    if (book.value.bookId) {
+      await fetchReadingStatus();
+    }
+  } catch (e) {
+    console.error('도서 정보를 불러오지 못했습니다', e);
+  }
+};
+
+// 해당 도서의 사용자 서재 읽기 상태 조회회
+const fetchReadingStatus = async () => {
+  if (!book.value.bookId) return;
+
+  try {
+    const { data } = await bookService.getReadingStatus(book.value.bookId);
+    bookcaseStatus.value = data;
+  } catch (err) {
+    console.warn("읽기 상태 조회 실패");
+    bookcaseStatus.value = null;
+  }
+};
+
+/* --- 책장 상태 변경 --- */
+const registerToBookcase = async () => {
+  try {
+    await bookcaseService.registerToRead(book.value);
+    bookcaseStatus.value = 'TO_READ';
+    alert("읽을 목록에 추가되었습니다!");
+  } catch (err) {
+    console.error("등록 실패", err);
+    alert("등록 중 오류 발생");
+  }
+};
+
+const startReading = async () => {
+  try {
+    await bookcaseService.startReading(book.value.bookId);
+    bookcaseStatus.value = 'READING';
+    alert("독서를 시작했습니다!");
+  } catch (err) {
+    console.error("독서 시작 실패", err);
+    alert("상태 변경 중 오류 발생");
+  }
+};
+
+const finishReading = async () => {
+  try {
+    await bookcaseService.finishReading(book.value.bookId);
+    bookcaseStatus.value = 'COMPLETE';
+    alert("독서를 완료했습니다!");
+  } catch (err) {
+    console.error("독서 완료 실패", err);
+    alert("상태 변경 중 오류 발생");
+  }
+};
+
+/* --- 초기 실행 --- */
+onMounted(fetchBookDetail);
 </script>
+
 <style scoped>
 .line-clamp-6 {
   display: -webkit-box;

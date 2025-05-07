@@ -1,15 +1,16 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 
 const routes = [
   {
     path: "/",
-    name: "Main",
-    component: () => import("../pages/HomePage.vue"),
-  },
-  {
-    path: "/login",
     name: "Login",
     component: () => import("../pages/LoginPage.vue"),
+  },
+  {
+    path: "/main",
+    name: "Main",
+    component: () => import("../pages/HomePage.vue"),
   },
   {
     path: "/register",
@@ -24,13 +25,35 @@ const routes = [
   {
     path: '/book/:isbn',
     name: 'BookDetail',
-    component: () => import('@/pages/BookDetail.vue')  // 또는 실제 경로에 맞게 수정
+    component: () => import('../pages/BookDetail.vue') 
   },  
+  {
+    path: '/bookcase',
+    name: 'BookCase',
+    component: () => import("../pages/BookcasePage.vue"),
+    meta: { requiresAuth: true }
+  },
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+router.beforeEach(async (to, from, next) => {
+  const auth = useAuthStore();
+
+  // accessToken 없을 경우 쿠키에서 복원
+  if (!auth.accessToken) {
+    await auth.initialize(); // 쿠키 기반으로 복원
+  }
+
+  // 인증이 필요한 페이지 접근 제한 (선택)
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    return next("/");
+  }
+
+  next();
 });
 
 export default router;

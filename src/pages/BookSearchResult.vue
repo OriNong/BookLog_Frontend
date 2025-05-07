@@ -50,98 +50,90 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, inject } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import SearchResult from '@/components/book/SearchResult.vue'  // 카드 그리드 컴포넌트
+import { ref, computed, watch, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { bookService } from '@/services/bookService';  // API 분리
+import SearchResult from '@/components/book/SearchResult.vue';
 
-// 백엔드 api 엔드포인트
-const axios = inject('axios')
+/* --------------------- 상수 --------------------- */
+const DEFAULT_SORT = 'accuracy';
+const PAGE_LIMIT = 20;
 
-/* --------------------------- 상태 --------------------------- */
-const route = useRoute()
-const router = useRouter()
+/* --------------------- 라우터 및 상태 --------------------- */
+const route = useRoute();
+const router = useRouter();
 
-const sort = ref(route.query.sort || 'accuracy') // 정렬 상태
-const books = ref([])              // 도서 결과
-const loading = ref(false)           // 로딩 플래그
-const error = ref(null)            // 에러 메시지
+const sort = ref(route.query.sort || DEFAULT_SORT);
+const page = ref(Number(route.query.page) || 1);
+const decodedQuery = computed(() => decodeURIComponent(route.query.query || ''));
 
-const page = ref(Number(route.query.page) || 1)   // 현재 페이지
-const limit = 20                                   // 페이지당 항목 수
+const books = ref([]);
+const total = ref(0);
+const totalPages = computed(() => Math.ceil(total.value / PAGE_LIMIT) || 1);
 
-const decodedQuery = computed(() =>
-    decodeURIComponent(route.query.query || '')
-)
+const loading = ref(false);
+const error = ref(null);
 
-const total = ref(0)                          // 총 건수
-const totalPages = computed(() =>
-    Math.ceil(total.value / limit) || 1
-)
-
-/* -------------------- 정렬 상태 변경 함수 --------------------- */
+/* --------------------- 정렬 변경 --------------------- */
 function changeSort(newSort) {
-  if (sort.value === newSort) return
-  router.replace({
-    query: {
-      ...route.query,
-      sort: newSort,
-      page: 1
-    }
-  })
+    if (sort.value === newSort) return;
+    router.replace({
+        query: { ...route.query, sort: newSort, page: 1 }
+    });
 }
 
-/* ---------------------- API 호출 함수 ----------------------- */
-async function fetchBooks() {
-    const query = decodedQuery.value.trim()
-    if (!query) { books.value = []; return }
-
-    loading.value = true
-    error.value = null
-
-    try {
-        const { data, headers } = await axios.get('/api/books/search', {
-            params: {
-                query, 
-                page: page.value, 
-                limit, 
-                sort: sort.value
-            }
-        })
-
-        books.value = data
-        // 총 건수를 헤더(예: X-Total-Count)로 내려준다는 가정
-        total.value = Number(headers['x-total-count'] || data.length)
-
-    } catch (e) {
-        console.error(e)
-        error.value = '검색 결과를 가져오지 못했습니다.'
-    } finally {
-        loading.value = false
-        // 스크롤 맨 위로
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-}
-
-/* ------------------------- 라우터 --------------------------- */
+/* --------------------- 페이지 이동 --------------------- */
 function onPageChange(newPage) {
     router.replace({
         query: { ...route.query, page: newPage }
-    })
+    });
 }
 
-/* URL 쿼리(query·page) 변경 시 새로 fetch */
+/* --------------------- 도서 검색 --------------------- */
+async function fetchBooks() {
+    const query = decodedQuery.value.trim();
+    if (!query) {
+        books.value = [];
+        total.value = 0;
+        return;
+    }
+
+    loading.value = true;
+    error.value = null;
+
+    try {
+        const { data, headers } = await bookService.searchBooks({
+            query,
+            page: page.value,
+            limit: PAGE_LIMIT,
+            sort: sort.value,
+        });
+
+        books.value = data;
+        total.value = Number(headers['x-total-count'] || data.length);
+    } catch (e) {
+        console.error('도서 검색 오류:', e);
+        error.value = '검색 결과를 가져오지 못했습니다.';
+    } finally {
+        loading.value = false;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+/* --------------------- 쿼리 변경 감지 --------------------- */
 watch(
-    () => [route.query.query, route.query.page],
-    ([,]) => {
-        page.value = Number(route.query.page) || 1
-        sort.value = route.query.sort || 'accuracy'
-        fetchBooks()
+    () => route.query,
+    () => {
+        page.value = Number(route.query.page) || 1;
+        sort.value = route.query.sort || DEFAULT_SORT;
+        fetchBooks();
     },
     { immediate: true }
-)
+);
 
-onMounted(fetchBooks)
+onMounted(fetchBooks);
 </script>
+
 
 <style scoped>
 /* 필요 시 스타일 추가 */

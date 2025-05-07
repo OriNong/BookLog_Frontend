@@ -1,25 +1,19 @@
-// src/main.js
-import { createApp } from 'vue'
-import App from './App.vue'
-import router from './router'
-import { createPinia } from 'pinia'
-import axios from 'axios'
+import { createApp } from 'vue';
+import App from './App.vue';
+import { createPinia } from 'pinia';
+import router from './router';
+import vuetify from './plugins/vuetify';
+import api from './services/api';
+import { useAuthStore } from '@/stores/auth';
 
-/* Vuetify 플러그인 */
-import vuetify from './plugins/vuetify'  
+(async () => {
+  const app = createApp(App);
+  const pinia = createPinia();
+  app.use(pinia);
 
-/* axios 인스턴스 */
-const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8000',
-  withCredentials: true,
-  headers: { 'Content-Type': 'application/json' },
-})
+  const auth = useAuthStore();
+  await auth.initialize(); //accessToken 세팅 보장
 
-const app = createApp(App)
-
-app
-  .use(router)
-  .use(createPinia())
-  .use(vuetify)                           
-  .provide('axios', axiosInstance)
-  .mount('#app')
+  app.use(router).use(vuetify).provide("axios", api);
+  app.mount('#app');
+})();

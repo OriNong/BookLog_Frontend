@@ -42,30 +42,46 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '@/stores/auth';  // 경로 정리
+import { storeToRefs } from 'pinia';
+import { onMounted } from 'vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { isAuthenticated } = storeToRefs(authStore);
 
+// 입력 값 및 상태
 const email = ref('');
 const password = ref('');
 const error = ref('');
 const loading = ref(false);
 
+// 로그인 처리 함수
 const handleLogin = async () => {
-    error.value = '';
-    loading.value = true;
+  error.value = '';
+  loading.value = true;
 
-    try {
-        await authStore.login(email.value, password.value);
-        router.push('/');
-    } catch (err) {
-        error.value = err.response?.data?.message || '로그인에 실패했습니다.';
-    } finally {
-        loading.value = false;
-    }
+  try {
+    await authStore.login(email.value, password.value);
+
+    // 로그인 성공 시 메인페이지로 이동
+    router.push('/main'); // 필요 시 '/'로 변경 가능
+  } catch (err) {
+    console.error('로그인 실패:', err);
+    error.value = err.response?.data?.message || '로그인에 실패했습니다.';
+  } finally {
+    loading.value = false;
+  }
 };
+
+// 이미 로그인 된 사용자가 로그인 페이지 접속 시 redirect
+onMounted(() => {
+  if (isAuthenticated.value) {
+    router.push('/main');
+  }
+});
 </script>
+
 
 <style scoped>
 .login-container {
