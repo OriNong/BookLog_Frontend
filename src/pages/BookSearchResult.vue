@@ -102,15 +102,15 @@ async function fetchBooks() {
     error.value = null;
 
     try {
-        const { data, headers } = await bookService.searchBooks({
+        const { data } = await bookService.searchBooks({
             query,
             page: page.value,
             limit: PAGE_LIMIT,
             sort: sort.value,
         });
 
-        books.value = data;
-        total.value = Number(headers['x-total-count'] || data.length);
+        books.value = data.books;
+        total.value = data.total;
     } catch (e) {
         console.error('도서 검색 오류:', e);
         error.value = '검색 결과를 가져오지 못했습니다.';

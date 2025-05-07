@@ -5,7 +5,12 @@ import { authService } from "@/services/authService";
 
 export const useAuthStore = defineStore("auth", {
   state: () => ({
-    user: null,
+    user: {
+      email: null,
+      nickname: null,
+      createdAt: null,
+      updatedAt: null,
+    },
     accessToken: Cookies.get("accessToken") || null,
     refreshToken: Cookies.get("refreshToken") || null,
     isAuthenticated: !!Cookies.get("accessToken"),
@@ -16,7 +21,7 @@ export const useAuthStore = defineStore("auth", {
       const res = await authService.login(email, password);
       console.log(res.accessToken);
       this.setTokens(res.accessToken, res.refreshToken);
-      this.user = res.user;
+      this.user = { nickname: res.nickname };
       this.isAuthenticated = true;
     },
 
@@ -24,25 +29,43 @@ export const useAuthStore = defineStore("auth", {
       this.accessToken = accessToken;
       this.refreshToken = refreshToken;
       this.isAuthenticated = true;
-      Cookies.set("accessToken", accessToken, { expires: 1 / 24 }); // 1시간
-      Cookies.set("refreshToken", refreshToken, { expires: 7 }); // 7일
+
+      const cookieOptions = {
+        path: "/", // 전체 경로 유효
+        sameSite: "Lax", // Lax는 로그인 후 자동 전송 가능
+        secure: false, // 로컬은 반드시 false
+      };
+
+      Cookies.set("accessToken", accessToken, {
+        ...cookieOptions,
+        expires: 1 / 1440, // 1시간
+      });
+
+      Cookies.set("refreshToken", refreshToken, {
+        ...cookieOptions,
+        expires: 7, // 7일
+      });
     },
 
     setAccessToken(accessToken) {
       this.accessToken = accessToken;
-      Cookies.set('accessToken', accessToken, {
-        expires: 1 / 24,
-        path: '/',
-        sameSite: 'Lax',
+      Cookies.set("accessToken", accessToken, {
+        path: "/",
+        sameSite: "Lax",
         secure: false,
+        expires: 1 / 24,
       });
-      
     },
 
     async fetchUserInfo() {
       try {
-        const user = await authService.getUserInfo(); // GET /auth/user
-        this.user = user;
+        const res = await authService.getUserInfo(); // GET /auth/user
+        this.user = {
+          email: res.email,
+          nickname: res.nickname,
+          createdAt: res.createdAt,
+          updatedAt: res.updatedAt,
+        };
       } catch (err) {
         this.logout();
       }

@@ -39,6 +39,11 @@
           독서 완료
         </v-btn>
 
+        <!-- ✅ 내 서재로 이동 버튼 (항상 보임 + 왼쪽 간격) -->
+        <v-btn class="ms-4" color="warning" @click="$router.push('/bookcase')">
+          내 서재로 이동
+        </v-btn>
+
       </v-col>
     </v-row>
 

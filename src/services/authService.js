@@ -60,6 +60,13 @@ export const authService = {
     return response.data;
   },
 
+  refresh: async (refreshToken) => {
+    const response = await api.post(API_ENDPOINTS.AUTH.REFRESH, {
+      refreshToken,
+    });
+    return response.data.accessToken; // DTO 기반
+  },
+
   // 로그아웃 요청
   logout: async () => {
     const response = await api.post(API_ENDPOINTS.AUTH.LOGOUT);
