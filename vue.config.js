@@ -5,7 +5,7 @@ module.exports = defineConfig({
 
   pluginOptions: {
     vuetify: {
-      // https://github.com/vuetifyjs/vuetify-loader/tree/next/packages/vuetify-loader
+      // 이 블록 전체 삭제
     }
   },
 

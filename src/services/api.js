@@ -29,11 +29,16 @@ api.interceptors.response.use(
     const auth = useAuthStore();
     const originalRequest = err.config;
 
+    // 로그인, 리프레시 요청일 경우 무한 루프 방지
+    const isAuthRequest =
+      originalRequest.url?.includes("/auth/login") ||
+      originalRequest.url?.includes("/auth/refresh");
+
     // accessToken 만료로 401 → refresh 시도
     if (
       err.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url.includes("/auth/refresh")
+      !isAuthRequest
     ) {
       originalRequest._retry = true;
       try {
@@ -44,6 +49,7 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest); // 원래 요청 재시도
       } catch (refreshErr) {
+        console.log(refreshErr);
         console.error("🔐 Refresh Token 만료 또는 위조됨. 로그아웃 처리");
         await auth.logout();
         router.push("/");

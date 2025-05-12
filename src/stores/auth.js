@@ -6,6 +6,7 @@ import { authService } from "@/services/authService";
 export const useAuthStore = defineStore("auth", {
   state: () => ({
     user: {
+      userId: null,
       email: null,
       nickname: null,
       createdAt: null,
@@ -21,7 +22,6 @@ export const useAuthStore = defineStore("auth", {
       const res = await authService.login(email, password);
       console.log(res.accessToken);
       this.setTokens(res.accessToken, res.refreshToken);
-      this.user = { nickname: res.nickname };
       this.isAuthenticated = true;
     },
 
@@ -31,14 +31,14 @@ export const useAuthStore = defineStore("auth", {
       this.isAuthenticated = true;
 
       const cookieOptions = {
-        path: "/", // 전체 경로 유효
-        sameSite: "Lax", // Lax는 로그인 후 자동 전송 가능
-        secure: false, // 로컬은 반드시 false
+        path: "/",        // 전체 경로 유효
+        sameSite: "Lax",  // Lax는 로그인 후 자동 전송 가능
+        secure: false,    // 로컬 환경에서 false, 배포 시 true(Https)
       };
 
       Cookies.set("accessToken", accessToken, {
         ...cookieOptions,
-        expires: 1 / 1440, // 1시간
+        expires: 1 / 24, // 1시간
       });
 
       Cookies.set("refreshToken", refreshToken, {
@@ -61,6 +61,7 @@ export const useAuthStore = defineStore("auth", {
       try {
         const res = await authService.getUserInfo(); // GET /auth/user
         this.user = {
+          userId: res.userId,
           email: res.email,
           nickname: res.nickname,
           createdAt: res.createdAt,

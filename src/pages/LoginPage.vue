@@ -64,6 +64,8 @@ const handleLogin = async () => {
   try {
     await authStore.login(email.value, password.value);
 
+    // 로그인 유저 정보 세팅
+    await authStore.fetchUserInfo();
     // 로그인 성공 시 메인페이지로 이동
     router.push('/main'); // 필요 시 '/'로 변경 가능
   } catch (err) {
@@ -71,6 +73,7 @@ const handleLogin = async () => {
     error.value = err.response?.data?.message || '로그인에 실패했습니다.';
   } finally {
     loading.value = false;
+    //authStore.fetchUserInfo();
   }
 };
 

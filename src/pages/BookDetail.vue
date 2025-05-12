@@ -1,5 +1,9 @@
 <template>
   <v-container>
+    <v-btn @click="goBack" variant="text" class="mb-4">
+      <v-icon start>mdi-arrow-left</v-icon>
+      뒤로가기
+    </v-btn>
     <!-- 도서 정보 -->
     <v-row class="mb-6">
       <v-col cols="12" md="4">
@@ -47,7 +51,7 @@
       </v-col>
     </v-row>
 
-    <!-- 리뷰 정렬 -->
+    <!-- 리뷰 정렬 영역 -->
     <v-row align="center" class="mb-3">
       <v-col cols="12" sm="6">
         <h3 class="text-h6 font-weight-medium">유저 리뷰</h3>
@@ -61,9 +65,14 @@
       </v-col>
     </v-row>
 
+    <!-- 🔽 리뷰가 없을 경우 -->
+    <v-alert v-if="reviews.length === 0" type="info" text class="mb-6">
+      아직 작성된 리뷰가 없습니다.
+    </v-alert>
+
     <!-- 리뷰 목록 -->
-    <v-row>
-      <v-col v-for="review in reviews" :key="review.id" cols="12" md="6">
+    <v-row v-else>
+      <v-col v-for="review in sortedReviews" :key="review.id" cols="12" md="6">
         <v-card class="pa-3">
           <div class="d-flex justify-space-between align-center mb-2">
             <div>
@@ -73,50 +82,62 @@
             <v-rating :model-value="review.rating" readonly size="small" color="amber" half-increments />
           </div>
           <div class="text-body-2 mb-2">❤️ {{ review.likes }} 좋아요</div>
-          <div class="text-caption text-grey">작성일: {{ review.date }}</div>
+          <div class="text-caption text-grey">작성일: {{ review.crtDate }}</div>
           <div class="text-end mt-2">
-            <v-btn size="small" variant="outlined" class="me-2">상세보기</v-btn>
-            <v-btn size="small" color="pink" variant="tonal">좋아요</v-btn>
+            <v-btn size="small" variant="outlined" class="me-2" @click="openReviewDetail(review.id)">상세보기</v-btn>
+            <v-btn size="small" :color="review.likedByUser ? 'pink' : 'grey'"
+              :variant="review.likedByUser ? 'elevated' : 'tonal'" @click="toggleLike(review.id)">
+              {{ review.likedByUser ? '좋아요 완료' : '좋아요' }}
+            </v-btn>
           </div>
         </v-card>
       </v-col>
     </v-row>
+    <ReviewDetailModal :review-id="selectedReviewId" :open="showModal" @close="showModal = false" />
+
   </v-container>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, onMounted, computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import dayjs from 'dayjs';
 import { bookService } from '@/services/bookService';
 import { bookcaseService } from '@/services/bookcaseService';
+import { reviewService } from '@/services/reviewService';
+import ReviewDetailModal from '@/components/review/ReviewDetailModal.vue';
 
 /* --- 라우트 및 기본 상태 --- */
+const router = useRouter();
 const route = useRoute();
 const isbn = route.params.isbn;
 
+//뒤로 가기
+const goBack = () => router.back();
+
 const book = ref({});
 const bookcaseStatus = ref(null); // TO_READ, READING, COMPLETE, null
-const reviewSort = ref('date');
 
-/* --- 더미 리뷰 데이터 (추후 API 연결 예정) --- */
-const reviews = ref([
-  {
-    id: 1,
-    title: '좋은 책입니다',
-    author: 'minsoo',
-    rating: 5,
-    likes: 8,
-    date: '2024-10-22'
-  },
-  {
-    id: 2,
-    title: '조금 지루했어요',
-    author: 'reader92',
-    rating: 3,
-    likes: 3,
-    date: '2024-09-19'
+/* --- 리뷰 관련 상태 --- */
+const reviews = ref([]);
+const reviewSort = ref('date');
+// 리뷰 정렬 기준에 따라 정렬
+const sortedReviews = computed(() => {
+  const sorted = [...reviews.value];
+  if (reviewSort.value === 'rating') {
+    return sorted.sort((a, b) => b.rating - a.rating);
+  } else if (reviewSort.value === 'likes') {
+    return sorted.sort((a, b) => b.likes - a.likes);
+  } else {
+    // 기본: 작성일자 (리뷰 ID가 높은 순 or 날짜 역순)
+    return sorted.sort((a, b) => new Date(b.date) - new Date(a.date));
   }
-]);
+});
+
+/* --- 리뷰 상세보기 관련 상태 --- */
+const showModal = ref(false);
+const selectedReviewId = ref(null);
+
 
 /* --- 도서 상세 및 상태 조회 --- */
 const fetchBookDetail = async () => {
@@ -132,7 +153,7 @@ const fetchBookDetail = async () => {
   }
 };
 
-// 해당 도서의 사용자 서재 읽기 상태 조회회
+// 해당 도서의 사용자 서재 읽기 상태 조회
 const fetchReadingStatus = async () => {
   if (!book.value.bookId) return;
 
@@ -146,6 +167,7 @@ const fetchReadingStatus = async () => {
 };
 
 /* --- 책장 상태 변경 --- */
+// 읽을 목록에 추가가
 const registerToBookcase = async () => {
   try {
     await bookcaseService.registerToRead(book.value);
@@ -156,7 +178,7 @@ const registerToBookcase = async () => {
     alert("등록 중 오류 발생");
   }
 };
-
+// 독서 시작
 const startReading = async () => {
   try {
     await bookcaseService.startReading(book.value.bookId);
@@ -167,7 +189,7 @@ const startReading = async () => {
     alert("상태 변경 중 오류 발생");
   }
 };
-
+// 독서 완료
 const finishReading = async () => {
   try {
     await bookcaseService.finishReading(book.value.bookId);
@@ -179,8 +201,54 @@ const finishReading = async () => {
   }
 };
 
+/* --- 리뷰 목록 호출 --- */
+const fetchReviews = async () => {
+  try {
+    const { data } = await reviewService.getReviewsByBookId(book.value.bookId);
+    reviews.value = data.map((review) => ({
+      id: review.reviewId,
+      title: review.reviewTitle,
+      content: review.reviewContent,
+      author: review.nickname,
+      rating: review.rating,
+      likes: review.likeCount,
+      crtDate: dayjs(review.createdAt).format('YYYY.MM.DD'),
+      updDate: dayjs(review.updatedAt).format('YYYY.MM.DD'),
+      likedByUser: review.likedByUser,
+    }));
+  } catch (err) {
+    console.error('리뷰 목록 불러오기 실패:', err);
+  }
+};
+
+/* --- 리뷰 좋아요 처리 api 호출 --- */
+const toggleLike = async (reviewId) => {
+  try {
+    const { data } = await reviewService.toggleLike(reviewId);
+    const review = reviews.value.find(r => r.id === reviewId);
+    if (review) {
+      review.likes = data.likeCount;
+      review.likedByUser = data.liked;
+    }
+  } catch (err) {
+    console.error('좋아요 토글 실패:', err);
+    alert('로그인 후 좋아요를 눌러주세요.');
+  }
+};
+
+/* --- 리뷰 상세보기 --- */
+const openReviewDetail = (reviewId) => {
+  selectedReviewId.value = reviewId;
+  showModal.value = true;
+};
+
+
+
 /* --- 초기 실행 --- */
-onMounted(fetchBookDetail);
+onMounted(async () => {
+  await fetchBookDetail(); // 먼저 도서 정보 가져오기
+  await fetchReviews();     // 그 다음 리뷰 목록 불러오기
+});
 </script>
 
 <style scoped>

@@ -36,7 +36,8 @@
             </template>
 
             <template v-else-if="status === 'COMPLETED'">
-                <v-btn color="blue-grey" variant="text" block to="/reviews" disabled>
+                <v-btn color="blue-grey" variant="text" block
+                :to="`/review/write/${book.bookId}`">
                     <v-icon start>mdi-comment-text-outline</v-icon>
                     리뷰 작성
                 </v-btn>

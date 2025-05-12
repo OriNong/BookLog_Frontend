@@ -17,4 +17,7 @@ export const bookService = {
   getReadingStatus: (bookId) => {
     return api.get(`${API_ENDPOINTS.BOOK.READING_STATUS}?bookId=${bookId}`);
   },
+  getBooksWithReview: () => {
+    return api.get(API_ENDPOINTS.BOOK.BOOKS_WITH_REVIEW)
+  },
 };

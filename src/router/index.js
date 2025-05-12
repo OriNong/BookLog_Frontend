@@ -8,30 +8,51 @@ const routes = [
     component: () => import("../pages/LoginPage.vue"),
   },
   {
-    path: "/main",
-    name: "Main",
-    component: () => import("../pages/HomePage.vue"),
-  },
-  {
     path: "/register",
     name: "Register",
     component: () => import("../pages/UserRegisterPage.vue"),
   },
   {
+    path: "/main",
+    name: "Main",
+    component: () => import("../pages/HomePage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/search",
     name: "Search",
     component: () => import("../pages/BookSearchResult.vue"),
+    meta: { requiresAuth: true },
   },
   {
-    path: '/book/:isbn',
-    name: 'BookDetail',
-    component: () => import('../pages/BookDetail.vue') 
-  },  
+    path: "/book/:isbn",
+    name: "BookDetail",
+    component: () => import("../pages/BookDetail.vue"),
+    meta: { requiresAuth: true },
+  },
   {
-    path: '/bookcase',
-    name: 'BookCase',
+    path: "/bookcase",
+    name: "BookCase",
     component: () => import("../pages/BookcasePage.vue"),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/review/write/:bookId",
+    name: "ReviewWrite",
+    component: () => import("../pages/ReviewFormPage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/review/edit/:reviewId",
+    name: "ReviewEdit",
+    component: () => import("../pages/ReviewFormPage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/reviews/my",
+    name: "MyReviews",
+    component: () => import("../pages/MyReviewPage.vue"),
+    meta: { requiresAuth: true },
   },
 ];
 

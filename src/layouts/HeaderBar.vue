@@ -1,77 +1,90 @@
 <template>
-    <v-app-bar height="72" elevation="3" class="header-gradient">
-        <v-container fluid class="d-flex align-center">
-            <!-- 좌측 로고 -->
-            <v-btn to="/main" variant="text" class="logo-btn" height="56" width="56">
-                <v-img :src="logo" alt="BOOKLOG 로고" height="56" width="56" cover />
-            </v-btn>
+    <v-app-bar app height="72" elevation="3" class="header-gradient">
+        <v-container fluid>
+            <v-row align="center" justify="space-between" no-gutters>
 
-            <v-spacer />
+                <!-- 좌측: 메뉴 + 로고 -->
+                <v-col class="d-flex align-center" cols="auto">
+                    <v-btn icon @click="$emit('toggle-drawer')">
+                        <v-icon>mdi-menu</v-icon>
+                    </v-btn>
+                </v-col>
 
-            <!-- 가운데 검색창 -->
-            <v-text-field v-model="keyword" placeholder="도서명, 저자명으로 검색" variant="solo-filled" density="comfortable"
-                append-inner-icon="mdi-magnify" rounded="pill" single-line hide-details class="search-input"
-                @keydown.enter="onSearch" />
+                <!-- 중앙: 검색창 -->
+                <v-col class="d-flex justify-center px-4">
+                    <v-text-field v-model="keyword" placeholder="도서명, 저자명으로 검색" variant="solo-filled"
+                        density="comfortable" append-inner-icon="mdi-magnify" rounded="pill" hide-details
+                        class="search-input" @keydown.enter="onSearch" />
+                </v-col>
 
-            <v-spacer />
+                <!-- 우측: 프로필 드롭다운 -->
+                <v-col cols="auto" class="d-flex justify-end align-center"
+                    v-if="authStore.isAuthenticated && authStore.user">
+                    <v-menu offset-y>
+                        <template #activator="{ props }">
+                            <v-btn icon v-bind="props">
+                                <v-icon color="white">mdi-account-circle</v-icon>
+                            </v-btn>
+                        </template>
 
-            <!-- 로그인 상태에 따라 버튼/닉네임 출력 -->
-            <div class="d-flex align-center">
-                <span v-if="authStore.isAuthenticated && authStore.user" class="mr-2 text-white font-weight-medium">
-                    {{ authStore.user.nickname }} 님
-                </span>
+                        <v-list>
+                            <v-list-item>
+                                <v-list-item-title class="font-weight-medium">
+                                    {{ authStore.user.nickname }} 님
+                                </v-list-item-title>
+                                <v-list-item-subtitle>{{ authStore.user.email }}</v-list-item-subtitle>
+                            </v-list-item>
 
-                <v-btn v-if="!authStore.isAuthenticated" to="/" variant="outlined" class="ml-2" color="white">
-                    로그인
-                </v-btn>
+                            <v-divider />
 
-                <v-btn v-else @click="handleLogout" variant="outlined" class="ml-2" color="white">
-                    로그아웃
-                </v-btn>
-            </div>
+                            <v-list-item @click="handleLogout">
+                                <v-list-item-title>로그아웃</v-list-item-title>
+                            </v-list-item>
+                        </v-list>
+                    </v-menu>
+                </v-col>
+                <v-col cols="auto" class="d-flex justify-end align-center" v-else>
+                    <v-btn to="/" variant="outlined" color="white">로그인</v-btn>
+                </v-col>
+            </v-row>
         </v-container>
     </v-app-bar>
 </template>
 
-
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import logo from '@/assets/logo.png'
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+//import logo from '@/assets/logo.png';
 
-const keyword = ref('')
-const router = useRouter()
-const authStore = useAuthStore()
+const keyword = ref('');
+const router = useRouter();
+const authStore = useAuthStore();
 
 function onSearch() {
-    const query = keyword.value.trim()
-    if (!query) return
-    router.push({ name: 'Search', query: { query } })
-    // 검색 실행 후 검색창 입력값 초기화
-    keyword.value = ''
+    const query = keyword.value.trim();
+    if (!query) return;
+    router.push({ name: 'Search', query: { query } });
+    keyword.value = '';
 }
 
 const handleLogout = async () => {
-    await authStore.logout()
-    router.push('/')
-}
+    await authStore.logout();
+    router.push('/');
+};
 </script>
 
 <style scoped>
-/* 헤더에 보라-파랑 그라데이션 */
 .header-gradient {
     background: linear-gradient(90deg, #667eea, #764ba2);
-    color: #fff;
+    color: white;
 }
 
-/* 로고 hover 부드럽게 확대 */
 .logo-btn:hover {
     transform: scale(1.05);
-    transition: transform .2s;
+    transition: transform 0.2s ease;
 }
 
-/* pill-형 검색창 폭 & blur 효과 */
 .search-input {
     max-width: 640px;
     width: 100%;
