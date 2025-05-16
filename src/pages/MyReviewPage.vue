@@ -1,6 +1,14 @@
 <template>
     <v-container class="py-6">
-        <h2 class="text-h5 font-weight-bold mb-4">내가 작성한 리뷰</h2>
+
+        <v-row class="mb-4" align="center" justify="space-between">
+            <v-col cols="auto">
+                <h2 class="text-h5 font-weight-bold">내가 작성한 리뷰</h2>
+            </v-col>
+            <v-col cols="auto">
+                <BackButton />
+            </v-col>
+        </v-row>
 
         <v-row v-if="reviews.length > 0" dense>
             <v-col v-for="review in reviews" :key="review.reviewId" cols="12" md="6">
@@ -50,6 +58,7 @@ import { ref, watch, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { reviewService } from '@/services/reviewService';
 import ReviewDetailModal from '@/components/review/ReviewDetailModal.vue';
+import BackButton from '@/components/common/BackButton.vue';
 
 const route = useRoute();
 const reviews = ref([]);

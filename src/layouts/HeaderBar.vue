@@ -4,11 +4,13 @@
             <v-row align="center" justify="space-between" no-gutters>
 
                 <!-- 좌측: 메뉴 + 로고 -->
-                <v-col class="d-flex align-center" cols="auto">
-                    <v-btn icon @click="$emit('toggle-drawer')">
+                <v-col class="d-flex align-center" cols="auto" @mouseenter="$emit('mouse-enter')"
+                    @mouseleave="$emit('mouse-leave')">
+                    <v-btn icon>
                         <v-icon>mdi-menu</v-icon>
                     </v-btn>
                 </v-col>
+
 
                 <!-- 중앙: 검색창 -->
                 <v-col class="d-flex justify-center px-4">

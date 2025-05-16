@@ -1,58 +1,58 @@
 <template>
     <v-container>
-        <h2 class="text-h4 font-weight-bold mb-6">나의 서재</h2>
-
-        <!-- 통계 및 필터링 섹션 -->
+        <v-row class="mb-4" align="center" justify="space-between">
+            <v-col cols="auto">
+                <h2  class="text-h4 font-weight-bold mb-6">{{ auth.user?.nickname }}님의 서재</h2>
+            </v-col>
+            <v-col cols="auto">
+                <BackButton />
+            </v-col>
+        </v-row>
+        <!-- 통계 및 필터링 -->
         <v-card class="mb-6" elevation="2">
             <v-card-text>
-                <v-row align="center">
-                    <!-- 통계 요약 -->
-                    <v-col cols="12" md="7" class="d-flex align-center">
+                <v-row align="center"> <!-- row 자체도 중앙 정렬 -->
+                    <!-- 차트 + 칩 -->
+                    <v-col cols="12" md="8" class="d-flex align-center justify-center">
                         <v-sheet class="mr-4" height="100px" width="100px">
                             <v-chart :option="chartOption" autoresize />
                         </v-sheet>
-                        <div>
+
+                        <div class="text-align">
                             <div class="text-subtitle-1 font-weight-bold mb-1">독서 현황</div>
-                            <div class="d-flex flex-wrap gap-3">
-                                <v-chip color="grey" variant="outlined" class="mr-2">
+                            <div class="d-flex flex-wrap justify-center gap-3">
+                                <v-chip :color="activeFilter === 'ALL' ? 'primary' : 'grey'" variant="outlined"
+                                    class="mr-2 cursor-pointer" @click="activeFilter = 'ALL'">
                                     <v-icon start>mdi-book-outline</v-icon>
                                     전체: {{ bookcase.length }}권
                                 </v-chip>
-                                <v-chip color="blue-grey" variant="outlined" class="mr-2">
+
+                                <v-chip :color="activeFilter === 'TO_READ' ? 'primary' : 'blue-grey'" variant="outlined"
+                                    class="mr-2 cursor-pointer" @click="activeFilter = 'TO_READ'">
                                     <v-icon start>mdi-bookmark-outline</v-icon>
-                                    읽을 예정: {{ toReadBooks.length }}권
+                                    읽을 예정: {{ statusBooks.TO_READ.length }}권
                                 </v-chip>
-                                <v-chip color="blue" variant="outlined" class="mr-2">
+
+                                <v-chip :color="activeFilter === 'READING' ? 'primary' : 'blue'" variant="outlined"
+                                    class="mr-2 cursor-pointer" @click="activeFilter = 'READING'">
                                     <v-icon start>mdi-book-open-variant</v-icon>
-                                    독서 중: {{ readingBooks.length }}권
+                                    독서 중: {{ statusBooks.READING.length }}권
                                 </v-chip>
-                                <v-chip color="green" variant="outlined">
+
+                                <v-chip :color="activeFilter === 'COMPLETED' ? 'primary' : 'green'" variant="outlined"
+                                    class="cursor-pointer" @click="activeFilter = 'COMPLETED'">
                                     <v-icon start>mdi-book-check</v-icon>
-                                    완료: {{ completeBooks.length }}권
+                                    완료: {{ statusBooks.COMPLETED.length }}권
                                 </v-chip>
                             </div>
                         </div>
-                    </v-col>
-
-                    <!-- 필터링 옵션 -->
-                    <v-col cols="12" md="5">
-                        <v-btn-toggle v-model="activeFilter" color="primary" mandatory density="comfortable"
-                            class="w-100">
-                            <v-btn value="ALL" :text="'전체 (' + bookcase.length + ')'" rounded="lg"
-                                class="flex-grow-1"></v-btn>
-                            <v-btn value="TO_READ" :text="'읽을 예정 (' + toReadBooks.length + ')'" rounded="lg"
-                                class="flex-grow-1"></v-btn>
-                            <v-btn value="READING" :text="'독서 중 (' + readingBooks.length + ')'" rounded="lg"
-                                class="flex-grow-1"></v-btn>
-                            <v-btn value="COMPLETED" :text="'완료 (' + completeBooks.length + ')'" rounded="lg"
-                                class="flex-grow-1"></v-btn>
-                        </v-btn-toggle>
                     </v-col>
                 </v-row>
             </v-card-text>
         </v-card>
 
-        <!-- 책이 없을 때 메시지 -->
+
+        <!-- 책 없음 메시지 -->
         <v-card v-if="filteredBooks.length === 0" class="text-center pa-8">
             <v-icon size="64" color="grey-lighten-1" icon="mdi-book-search-outline"></v-icon>
             <div class="text-h6 mt-4 mb-2">책이 없습니다</div>
@@ -73,17 +73,20 @@
     </v-container>
 </template>
 
+
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useAuthStore } from '@/stores/auth';
 import { bookcaseService } from '@/services/bookcaseService';
 import BookcaseCard from '@/components/book/BookcaseCard.vue';
 
-// ECharts 라이브러리 사용을 위한 설정
+// ECharts 설정
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
 import { PieChart } from 'echarts/charts';
 import { TooltipComponent, LegendComponent } from 'echarts/components';
 import VChart from 'vue-echarts';
+import BackButton from '@/components/common/BackButton.vue';
 
 use([
     CanvasRenderer,
@@ -92,55 +95,48 @@ use([
     LegendComponent
 ]);
 
+const auth = useAuthStore();
 const bookcase = ref([]);
 const activeFilter = ref('ALL');
 const isLoading = ref(false);
 
-// 필터링된 책 목록
-const filteredBooks = computed(() => {
-    if (activeFilter.value === 'ALL') {
-        return bookcase.value;
-    }
-    return bookcase.value.filter(book => book.readingStatus === activeFilter.value);
-});
-
-// 상태별 책 목록 (통계용)
-const toReadBooks = computed(() =>
-    bookcase.value.filter(book => book.readingStatus === 'TO_READ')
-);
-const readingBooks = computed(() =>
-    bookcase.value.filter(book => book.readingStatus === 'READING')
-);
-const completeBooks = computed(() =>
-    bookcase.value.filter(book => book.readingStatus === 'COMPLETED')
-);
-
-// 차트 옵션
-const chartOption = computed(() => {
+// 상태별 분류
+const statusBooks = computed(() => {
     return {
-        tooltip: {
-            trigger: 'item',
-            formatter: '{b}: {c}권 ({d}%)'
-        },
-        series: [
-            {
-                type: 'pie',
-                radius: ['50%', '70%'],
-                avoidLabelOverlap: false,
-                label: {
-                    show: false
-                },
-                data: [
-                    { value: toReadBooks.value.length, name: '읽을 예정', itemStyle: { color: '#78909C' } },
-                    { value: readingBooks.value.length, name: '독서 중', itemStyle: { color: '#2196F3' } },
-                    { value: completeBooks.value.length, name: '완료', itemStyle: { color: '#4CAF50' } }
-                ]
-            }
-        ]
+        TO_READ: bookcase.value.filter(book => book.readingStatus === 'TO_READ'),
+        READING: bookcase.value.filter(book => book.readingStatus === 'READING'),
+        COMPLETED: bookcase.value.filter(book => book.readingStatus === 'COMPLETED')
     };
 });
 
-/* --- 서재 목록 조회 --- */
+// 필터링된 목록
+const filteredBooks = computed(() => {
+    if (activeFilter.value === 'ALL') return bookcase.value;
+    return statusBooks.value[activeFilter.value] || [];
+});
+
+// 차트 옵션
+const chartOption = computed(() => ({
+    tooltip: {
+        trigger: 'item',
+        formatter: '{b}: {c}권 ({d}%)'
+    },
+    series: [
+        {
+            type: 'pie',
+            radius: ['50%', '70%'],
+            avoidLabelOverlap: false,
+            label: { show: false },
+            data: [
+                { value: statusBooks.value.TO_READ.length, name: '읽을 예정', itemStyle: { color: '#78909C' } },
+                { value: statusBooks.value.READING.length, name: '독서 중', itemStyle: { color: '#2196F3' } },
+                { value: statusBooks.value.COMPLETED.length, name: '완료', itemStyle: { color: '#4CAF50' } }
+            ]
+        }
+    ]
+}));
+
+// 서재 목록
 const fetchBookcase = async () => {
     isLoading.value = true;
     try {
@@ -153,7 +149,7 @@ const fetchBookcase = async () => {
     }
 };
 
-/* --- 독서 시작 --- */
+// 독서 상태 변경
 const startReading = async (bookId) => {
     try {
         await bookcaseService.startReading(bookId);
@@ -163,7 +159,6 @@ const startReading = async (bookId) => {
     }
 };
 
-/* --- 독서 완료 --- */
 const finishReading = async (bookId) => {
     try {
         await bookcaseService.finishReading(bookId);
@@ -175,6 +170,7 @@ const finishReading = async (bookId) => {
 
 onMounted(fetchBookcase);
 </script>
+
 
 <style scoped>
 .book-column {

@@ -1,19 +1,7 @@
 <template>
   <v-app>
-    <HeaderBar v-if="showHeader" @toggle-drawer="layout.toggleDrawer"/>
-
-    <v-navigation-drawer
-      app
-      v-model="layout.drawer"
-      clipped
-      class="pt-0"
-    >
-      <v-list dense>
-        <v-list-item to="/main" prepend-icon="mdi-home" title="홈" />
-        <v-list-item to="/reviews/my" prepend-icon="mdi-note-text-outline" title="나의 리뷰" />
-        <v-list-item to="/bookcase" prepend-icon="mdi-bookshelf" title="내 서재" />
-      </v-list>
-    </v-navigation-drawer>
+    <HeaderBar v-if="showHeader" @mouse-enter="handleMouseEnter" @mouse-leave="handleMouseLeave" />
+    <NavigationDrawer :drawer="layout.drawer" @mouse-enter="handleMouseEnter" @mouse-leave="handleMouseLeave" />
 
     <v-main :class="{ 'with-header': showHeader }">
       <router-view />
@@ -24,12 +12,30 @@
 
 <script setup>
 import { useRoute } from 'vue-router'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import HeaderBar from '@/layouts/HeaderBar.vue'
 import { useLayoutStore } from './stores/layout'
+import NavigationDrawer from './layouts/NavigationDrawer.vue';
+
+const route = useRoute()
 
 const layout = useLayoutStore();
-const route = useRoute()
+const isHovering = ref(false); // 마우스가 메뉴 or drawer 위에 있는지 여부
+
+let closeTimeout; // 닫힘 예약
+
+const handleMouseEnter = () => {
+  isHovering.value = true;
+  layout.openDrawer();
+  clearTimeout(closeTimeout); // 닫힘 예약 제거
+};
+
+const handleMouseLeave = () => {
+  isHovering.value = false;
+  closeTimeout = setTimeout(() => {
+    if (!isHovering.value) layout.closeDrawer();
+  }, 200); // 약간의 딜레이로 안정성 향상
+};
 
 // 경로에 따라 헤더 표시 여부 결정
 const showHeader = computed(() => {
@@ -37,6 +43,4 @@ const showHeader = computed(() => {
 })
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>

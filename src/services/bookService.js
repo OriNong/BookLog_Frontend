@@ -13,9 +13,14 @@ export const bookService = {
     return api.get(API_ENDPOINTS.BOOK.DETAIL(isbn));
   },
 
+  // 도서의 서재 등록 통계 조회(bookId 기반)
+  getBookcaseStats: (bookId) => {
+    return api.get(API_ENDPOINTS.BOOK.BOOKCASE_STATS(bookId));
+  },
+
   // 읽는 중인지 여부 확인 (bookId 기반)
   getReadingStatus: (bookId) => {
-    return api.get(`${API_ENDPOINTS.BOOK.READING_STATUS}?bookId=${bookId}`);
+    return api.get(API_ENDPOINTS.BOOK.READING_STATUS(bookId));
   },
   getBooksWithReview: () => {
     return api.get(API_ENDPOINTS.BOOK.BOOKS_WITH_REVIEW)

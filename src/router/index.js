@@ -27,7 +27,7 @@ const routes = [
   {
     path: "/book/:isbn",
     name: "BookDetail",
-    component: () => import("../pages/BookDetail.vue"),
+    component: () => import("../pages/BookDetailPage.vue"),
     meta: { requiresAuth: true },
   },
   {

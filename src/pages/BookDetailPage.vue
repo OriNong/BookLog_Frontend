@@ -1,9 +1,6 @@
 <template>
   <v-container>
-    <v-btn @click="goBack" variant="text" class="mb-4">
-      <v-icon start>mdi-arrow-left</v-icon>
-      뒤로가기
-    </v-btn>
+    <BackButton />
     <!-- 도서 정보 -->
     <v-row class="mb-6">
       <v-col cols="12" md="4">
@@ -24,9 +21,9 @@
 
         <!-- 상태 카운트 -->
         <v-row dense class="mb-4">
-          <v-col cols="12" sm="4">📚 {{ book.stats?.shelf || 0 }}명 서재에 등록</v-col>
-          <v-col cols="12" sm="4">📖 {{ book.stats?.reading || 0 }}명 읽는 중</v-col>
-          <v-col cols="12" sm="4">✅ {{ book.stats?.done || 0 }}명 독서 완료</v-col>
+          <v-col cols="12" sm="4">📚 {{ bookcaseStats.total || 0 }}명 서재에 등록</v-col>
+          <v-col cols="12" sm="4">📖 {{ bookcaseStats.reading || 0 }}명 읽는 중</v-col>
+          <v-col cols="12" sm="4">✅ {{ bookcaseStats.completed || 0 }}명 독서 완료</v-col>
         </v-row>
 
         <!-- 액션 버튼 -->
@@ -100,22 +97,20 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import dayjs from 'dayjs';
 import { bookService } from '@/services/bookService';
 import { bookcaseService } from '@/services/bookcaseService';
 import { reviewService } from '@/services/reviewService';
 import ReviewDetailModal from '@/components/review/ReviewDetailModal.vue';
+import BackButton from '@/components/common/BackButton.vue';
 
 /* --- 라우트 및 기본 상태 --- */
-const router = useRouter();
 const route = useRoute();
 const isbn = route.params.isbn;
 
-//뒤로 가기
-const goBack = () => router.back();
-
 const book = ref({});
+const bookcaseStats = ref({});
 const bookcaseStatus = ref(null); // TO_READ, READING, COMPLETE, null
 
 /* --- 리뷰 관련 상태 --- */
@@ -146,12 +141,25 @@ const fetchBookDetail = async () => {
     book.value = data;
 
     if (book.value.bookId) {
+      await fetchBookcaseStats();
       await fetchReadingStatus();
     }
   } catch (e) {
     console.error('도서 정보를 불러오지 못했습니다', e);
   }
 };
+
+// 해당 도서의 서재 등록 통계 정보 조회
+const fetchBookcaseStats = async () => {
+  if (!book.value.bookId) return;
+  try {
+    const {data} = await bookService.getBookcaseStats(book.value.bookId);
+    bookcaseStats.value = data;
+  } catch (error) {
+    console.warn("서재 통계 정보 조회 실패");
+    bookcaseStats.value = null;
+  }
+}
 
 // 해당 도서의 사용자 서재 읽기 상태 조회
 const fetchReadingStatus = async () => {
