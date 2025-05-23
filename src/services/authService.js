@@ -72,4 +72,26 @@ export const authService = {
     const response = await api.post(API_ENDPOINTS.AUTH.LOGOUT);
     return response.data;
   },
+  // 비밀번호 재설정 인증 코드 전송
+sendResetCode: async (email) => {
+  return await api.post("/auth/forgot-password/send-code", null, {
+    params: { email },
+  });
+},
+
+// 비밀번호 재설정 인증 코드 검증
+verifyResetCode: async (email, code) => {
+  return await api.post("/auth/forgot-password/verify-code", {
+    email,
+    code,
+  });
+},
+
+// 비밀번호 재설정
+resetPassword: async (email, newPassword) => {
+  return await api.post("/auth/forgot-password/reset", {
+    email,
+    newPassword,
+  });
+},
 };

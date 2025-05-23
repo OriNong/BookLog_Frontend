@@ -16,7 +16,7 @@
                             <BackButton />
                         </v-col>
                     </v-row>
-                    
+
                     <v-form ref="form" v-model="isFormValid" @submit.prevent="submitForm">
 
                         <!-- 이메일 -->
@@ -190,7 +190,8 @@ async function checkEmailAvailability() {
         }
     } catch (err) {
         console.error(err);
-        showNotification('이메일 확인 중 오류가 발생했습니다.', 'error');
+        showNotification(err.response.data.message
+        );
     } finally {
         isEmailChecking.value = false;
     }

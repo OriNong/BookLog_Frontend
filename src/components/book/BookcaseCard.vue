@@ -18,6 +18,22 @@
         <v-card-text class="px-3 py-2">
             <span :class="statusTextClass">{{ book.statusText }}</span>
         </v-card-text>
+        <v-card-actions class="pt-0 px-3 pb-3">
+            <v-row v-if="status !== 'TO_READ'" dense no-gutters class="w-100">
+                <v-col cols="6" class="pr-1">
+                    <v-btn variant="outlined" color="warning" block @click="$emit('rollback', book.bookcaseId)">
+                        <v-icon start>mdi-undo</v-icon>
+                        되돌리기
+                    </v-btn>
+                </v-col>
+                <v-col cols="6" class="pl-1">
+                    <v-btn variant="outlined" color="error" block @click="$emit('delete', book.bookcaseId)">
+                        <v-icon start>mdi-delete</v-icon>
+                        삭제하기
+                    </v-btn>
+                </v-col>
+            </v-row>
+        </v-card-actions>
 
         <!-- 액션 버튼 -->
         <v-card-actions class="pt-0 px-3 pb-3">
@@ -35,19 +51,35 @@
                 </v-btn>
             </template>
 
-            <template v-else-if="status === 'COMPLETED'">
-                <v-btn color="blue-grey" variant="text" block
-                :to="`/review/write/${book.bookId}`">
-                    <v-icon start>mdi-comment-text-outline</v-icon>
-                    리뷰 작성
-                </v-btn>
+            <template v-if="status === 'COMPLETED'">
+                <!-- 리뷰가 존재하고 삭제되지 않은 경우 -->
+                <template v-if="reviewStatus?.reviewId && reviewStatus.isDeleted === false">
+                    <v-btn color="secondary" variant="text" block :to="`/review/edit/${reviewStatus.reviewId}`">
+                        <v-icon start>mdi-pencil</v-icon>
+                        리뷰 수정하기
+                    </v-btn>
+                    <v-btn color="error" variant="text" block @click="$emit('delete-review', reviewStatus.reviewId)">
+                        <v-icon start>mdi-delete</v-icon>
+                        삭제하기
+                    </v-btn>
+                </template>
+
+                <!-- 그 외: 리뷰 없음 or 논리 삭제됨 -->
+                <template v-else>
+                    <v-btn color="blue-grey" variant="text" block :to="`/review/write/${book.bookId}`">
+                        <v-icon start>mdi-comment-text-outline</v-icon>
+                        리뷰 작성
+                    </v-btn>
+                </template>
             </template>
+
         </v-card-actions>
     </v-card>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { bookcaseService } from '@/services/bookcaseService';
 
 const props = defineProps({
     book: {
@@ -59,6 +91,13 @@ const props = defineProps({
         default: 'TO_READ',
         validator: (value) => ['TO_READ', 'READING', 'COMPLETED'].includes(value)
     }
+});
+
+const reviewStatus = ref(null);
+
+onMounted(async () => {
+    const res = await bookcaseService.getMyReviewStatus(props.book.bookId);
+    reviewStatus.value = res.data; // { reviewId, bookId, exists }
 });
 
 // 상태에 따른 스타일 클래스

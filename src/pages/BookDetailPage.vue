@@ -32,14 +32,6 @@
           읽을 목록에 추가
         </v-btn>
 
-        <v-btn v-else-if="bookcaseStatus === 'TO_READ'" color="success" @click="startReading">
-          독서 시작
-        </v-btn>
-
-        <v-btn v-else-if="bookcaseStatus === 'READING'" color="warning" @click="finishReading">
-          독서 완료
-        </v-btn>
-
         <!-- ✅ 내 서재로 이동 버튼 (항상 보임 + 왼쪽 간격) -->
         <v-btn class="ms-4" color="warning" @click="$router.push('/bookcase')">
           내 서재로 이동
@@ -153,7 +145,7 @@ const fetchBookDetail = async () => {
 const fetchBookcaseStats = async () => {
   if (!book.value.bookId) return;
   try {
-    const {data} = await bookService.getBookcaseStats(book.value.bookId);
+    const { data } = await bookService.getBookcaseStats(book.value.bookId);
     bookcaseStats.value = data;
   } catch (error) {
     console.warn("서재 통계 정보 조회 실패");
@@ -183,29 +175,8 @@ const registerToBookcase = async () => {
     alert("읽을 목록에 추가되었습니다!");
   } catch (err) {
     console.error("등록 실패", err);
-    alert("등록 중 오류 발생");
-  }
-};
-// 독서 시작
-const startReading = async () => {
-  try {
-    await bookcaseService.startReading(book.value.bookId);
-    bookcaseStatus.value = 'READING';
-    alert("독서를 시작했습니다!");
-  } catch (err) {
-    console.error("독서 시작 실패", err);
-    alert("상태 변경 중 오류 발생");
-  }
-};
-// 독서 완료
-const finishReading = async () => {
-  try {
-    await bookcaseService.finishReading(book.value.bookId);
-    bookcaseStatus.value = 'COMPLETE';
-    alert("독서를 완료했습니다!");
-  } catch (err) {
-    console.error("독서 완료 실패", err);
-    alert("상태 변경 중 오류 발생");
+    alert(err.response.data.message
+    );
   }
 };
 

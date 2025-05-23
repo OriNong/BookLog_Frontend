@@ -20,5 +20,6 @@ const menuItems = [
     { to: '/main', icon: 'mdi-home', title: '홈' },
     { to: '/reviews/my', icon: 'mdi-note-text-outline', title: '나의 리뷰' },
     { to: '/bookcase', icon: 'mdi-bookshelf', title: '내 서재' },
+    { to: '/myInfo', icon: 'mdi-account-circle', title: '나의 정보'}
 ];
 </script>

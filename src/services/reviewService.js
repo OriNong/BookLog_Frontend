@@ -12,10 +12,11 @@ export const reviewService = {
 
   // 리뷰 수정
   updateReview: (reviewId, payload) =>
-  api.put(API_ENDPOINTS.REVIEW.UPDATE_REVIEW(reviewId), payload),
+    api.put(API_ENDPOINTS.REVIEW.UPDATE_REVIEW(reviewId), payload),
 
   // 리뷰 삭제
-  deleteReview: (reviewId) => api.delete(API_ENDPOINTS.REVIEW.DELETE_REVIEW(reviewId)),
+  deleteReview: (reviewId) =>
+    api.delete(API_ENDPOINTS.REVIEW.DELETE_REVIEW(reviewId)),
 
   // 도서에 등록된 리뷰 목록 조회
   getReviewsByBookId: (bookId) =>
@@ -30,4 +31,7 @@ export const reviewService = {
     api.get(API_ENDPOINTS.REVIEW.GET_REVIEW_DETAIL(reviewId)),
   // 사용자가 자신의 리뷰 목록 조회
   getMyReview: () => api.get(API_ENDPOINTS.REVIEW.MY_REVIEW),
+  // 사용자가 관리자가 삭제한 자신의 리뷰 목록 조회
+  getMyReviewDeletedByAdmin: () =>
+    api.get(API_ENDPOINTS.REVIEW.MY_REVIEW_DELETED_BY_ADMIN),
 };

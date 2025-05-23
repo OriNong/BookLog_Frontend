@@ -1,5 +1,5 @@
 <template>
-    <v-app-bar app height="72" elevation="3" class="header-gradient">
+    <v-app-bar app height="80" elevation="3" class="header-gradient">
         <v-container fluid>
             <v-row align="center" justify="space-between" no-gutters>
 
@@ -15,8 +15,8 @@
                 <!-- 중앙: 검색창 -->
                 <v-col class="d-flex justify-center px-4">
                     <v-text-field v-model="keyword" placeholder="도서명, 저자명으로 검색" variant="solo-filled"
-                        density="comfortable" append-inner-icon="mdi-magnify" rounded="pill" hide-details
-                        class="search-input" @keydown.enter="onSearch" />
+                        density="comfortable" append-inner-icon="mdi-magnify" rounded="pill" class="search-input"
+                        @keydown.enter="onSearch" maxlength="100" counter :hide-details="false" />
                 </v-col>
 
                 <!-- 우측: 프로필 드롭다운 -->

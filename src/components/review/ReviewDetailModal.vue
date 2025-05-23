@@ -36,13 +36,15 @@
                                             <v-textarea v-model="editedContent" auto-grow rows="2" />
                                             <div class="text-right mt-1">
                                                 <v-btn size="small" color="primary"
-                                                    @click="updateComment(comment.commentId)">저장</v-btn>
+                                                    @click="updateComment(comment.commentId, comment.deleted)">저장</v-btn>
                                                 <v-btn size="small" variant="text" @click="cancelEdit">취소</v-btn>
                                             </div>
                                         </div>
 
                                         <template v-else>
-                                            <div class="text-body-2 mb-1">{{ comment.content }}</div>
+                                            <div class="text-body-2 mb-1">
+                                                {{ comment.deleted ? '삭제된 댓글입니다.' : comment.content }}
+                                            </div>
                                             <div class="text-caption text-grey">{{ formatDate(comment.createdAt) }}
                                             </div>
                                             <v-btn size="small" variant="text"
@@ -52,7 +54,7 @@
 
                                     <div v-if="auth.user?.userId === comment.userId">
                                         <v-btn size="x-small" variant="text" @click="editComment(comment)">수정</v-btn>
-                                        <v-btn size="x-small" variant="text" color="error"
+                                        <v-btn v-if="!comment.deleted" size="x-small" variant="text" color="error"
                                             @click="deleteComment(comment.commentId)">삭제</v-btn>
                                     </div>
                                 </div>
@@ -69,20 +71,22 @@
                                             <v-textarea v-model="editedContent" auto-grow rows="2" />
                                             <div class="text-right mt-1">
                                                 <v-btn size="small" color="primary"
-                                                    @click="updateComment(reply.commentId)">저장</v-btn>
+                                                    @click="updateComment(reply.commentId, reply.deleted)">저장</v-btn>
                                                 <v-btn size="small" variant="text" @click="cancelEdit">취소</v-btn>
                                             </div>
                                         </div>
 
                                         <template v-else>
-                                            <div class="text-body-2 mb-1">{{ reply.content }}</div>
+                                            <div class="text-body-2 mb-1">
+                                                {{ reply.deleted ? '삭제된 댓글입니다.' : reply.content }}
+                                            </div>
                                             <div class="text-caption text-grey">{{ formatDate(reply.createdAt) }}</div>
                                         </template>
                                     </div>
 
                                     <div v-if="auth.user?.userId === reply.userId">
                                         <v-btn size="x-small" variant="text" @click="editComment(reply)">수정</v-btn>
-                                        <v-btn size="x-small" variant="text" color="error"
+                                        <v-btn v-if="!reply.deleted" size="x-small" variant="text" color="error"
                                             @click="deleteComment(reply.commentId)">삭제</v-btn>
                                     </div>
                                 </div>
@@ -90,7 +94,7 @@
                         </v-list-item>
 
                         <div v-if="activeReply === comment.commentId" class="pl-10 pr-3 pb-4">
-                            <v-textarea v-model="replyContent" auto-grow label="답글을 입력하세요" rows="2" />
+                            <v-textarea v-model="replyContent" auto-grow label="답글을 입력하세요" rows="2" maxlength="100"/>
                             <div class="text-right mt-1">
                                 <v-btn size="small" color="primary" @click="submitReply(comment.commentId)">등록</v-btn>
                                 <v-btn size="small" variant="text" @click="cancelReply">취소</v-btn>
@@ -99,14 +103,20 @@
                     </template>
                 </v-list>
 
-                <v-textarea v-model="newComment" label="댓글을 입력하세요" auto-grow rows="2" class="mt-4" />
+                <v-textarea v-model="newComment" label="댓글을 입력하세요" auto-grow rows="2" class="mt-4" maxlength="100"/>
             </v-card-text>
 
             <v-card-actions>
+                <v-btn v-if="auth.user?.nickname != review?.nickname" color="error" variant="tonal" size="small" @click="showReportDialog = true">
+                    리뷰 신고
+                </v-btn>
                 <v-spacer />
                 <v-btn color="primary" @click="submitComment(review.commentId)" :disabled="!newComment.trim()">
                     댓글 등록
                 </v-btn>
+                <!-- 리뷰 신고 다이얼로그 연결 -->
+                <ReviewReportDialog :review-id="props.reviewId" :open="showReportDialog"
+                    @close="showReportDialog = false" @submitted="showReportDialog = false" />
             </v-card-actions>
         </v-card>
     </v-dialog>
@@ -118,6 +128,7 @@ import { useRouter } from 'vue-router';
 import { reviewService } from '@/services/reviewService';
 import { commentService } from '@/services/commentService';
 import { useAuthStore } from '@/stores/auth';
+import ReviewReportDialog from './ReviewReportDialog.vue';
 import dayjs from 'dayjs';
 
 // 댓글 수정/삭제를 위한 로그인 사용자 정보
@@ -151,6 +162,9 @@ const replyContent = ref('');
 const editingCommentId = ref(null);      // 수정 중인 댓글 ID
 const editedContent = ref('');           // 수정 내용 임시 저장
 
+// 신고하기 관련 상태
+const showReportDialog = ref(false);
+
 
 // 날짜 포맷
 const formatDate = (dt) => dayjs(dt).format('YYYY.MM.DD HH:mm');
@@ -161,7 +175,8 @@ const fetchReviewDetail = async () => {
         const { data } = await reviewService.getReviewDetailByReviewId(props.reviewId);
         review.value = data;
     } catch (err) {
-        console.error('리뷰 상세 조회 실패', err);
+        console.error(err.response.data.message);
+        alert(err.response.data.message);
     }
 };
 // 리뷰 수정 시 수정 페이지 이동
@@ -183,7 +198,7 @@ const confirmDelete = async () => {
         emit('refresh'); // 리뷰 목록 다시 불러오기 요청
     } catch (err) {
         console.error("리뷰 삭제 실패:", err);
-        alert("리뷰 삭제 중 오류가 발생했습니다.");
+        alert(err.response.data.message);
     }
 };
 
@@ -194,7 +209,7 @@ const fetchComments = async () => {
         comments.value = data;
         console.log(comments.value);
     } catch (err) {
-        console.error('댓글 목록 조회 실패:', err);
+        alert(err.response.data.message);
     }
 };
 
@@ -212,7 +227,7 @@ const submitComment = async () => {
         await fetchComments();
     } catch (err) {
         console.error('댓글 등록 실패', err);
-        alert('댓글 등록 중 오류가 발생했습니다');
+        alert(err.response.data.message);
     }
 };
 
@@ -245,6 +260,7 @@ const submitReply = async (parentCommentId) => {
         activeReply.value = null;
     } catch (err) {
         console.error(' 대댓글 등록 실패', err);
+        alert(err.response.data.message);
     }
 };
 
@@ -260,11 +276,16 @@ const cancelEdit = () => {
 };
 
 // 댓글 수정 API 호출
-const updateComment = async (commentId) => {
+const updateComment = async (commentId, isDeleted) => {
     if (!editedContent.value.trim()) return;
+    if (isDeleted) {
+        const confirmed = window.confirm("정말 수정하시겠습니까? 수정 시 삭제가 취소됩니다.");
+        if (!confirmed) return;
+    } else {
+        const confirmed = window.confirm("정말 수정하시겠습니까?");
+        if (!confirmed) return;
+    }
 
-    const confirmed = window.confirm("정말 수정하시겠습니까?");
-    if (!confirmed) return;
 
     try {
         await commentService.updateReviewComment(commentId, {
@@ -275,7 +296,7 @@ const updateComment = async (commentId) => {
         editedContent.value = '';
     } catch (err) {
         console.error("댓글 수정 실패:", err);
-        alert("댓글 수정 중 오류가 발생했습니다");
+        alert(err.response.data.message);
     }
 };
 
@@ -286,10 +307,11 @@ const deleteComment = async (commentId) => {
 
     try {
         await commentService.deleteReviewComment(commentId);
+        alert("댓글이 삭제되었습니다")
         await fetchComments();
     } catch (err) {
         console.error(" 댓글 삭제 실패:", err);
-        alert("댓글 삭제 중 오류가 발생했습니다.");
+        alert(err.response.data.message);
     }
 };
 

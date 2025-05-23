@@ -110,7 +110,7 @@ const submitReview = async () => {
         }
     } catch (err) {
         console.error("리뷰 저장 실패:", err);
-        alert("리뷰 저장 중 문제가 발생했습니다.");
+        alert(err.response.data.message);
     }
 };
 
@@ -126,6 +126,7 @@ onMounted(async () => {
             await fetchReviewRequestBook(fetchedBookId); // 리뷰에 연결된 책 정보 로딩
         } catch (err) {
             console.error("리뷰 수정 모드 데이터 불러오기 실패", err);
+            alert(err.response.data.message);
         } finally {
             loading.value = false;
         }

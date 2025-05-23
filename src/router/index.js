@@ -13,6 +13,11 @@ const routes = [
     component: () => import("../pages/UserRegisterPage.vue"),
   },
   {
+    path: "/reset/password",
+    name: "ResetPassword",
+    component: () => import("../pages/PasswordResetFlowPage.vue"),
+  },
+  {
     path: "/main",
     name: "Main",
     component: () => import("../pages/HomePage.vue"),
@@ -52,6 +57,12 @@ const routes = [
     path: "/reviews/my",
     name: "MyReviews",
     component: () => import("../pages/MyReviewPage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/myInfo",
+    name: "MyPage",
+    component: () => import("../pages/MyPage.vue"),
     meta: { requiresAuth: true },
   },
 ];

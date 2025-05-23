@@ -39,7 +39,7 @@ const handleMouseLeave = () => {
 
 // 경로에 따라 헤더 표시 여부 결정
 const showHeader = computed(() => {
-  return route.name !== 'Login' && route.name !== 'Register'
+  return route.name !== 'Login' && route.name !== 'Register' && route.name !== 'ResetPassword'
 })
 </script>
 

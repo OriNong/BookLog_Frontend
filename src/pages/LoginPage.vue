@@ -27,7 +27,7 @@
 
                 <!-- 링크 영역 -->
                 <div class="d-flex justify-space-between mt-6">
-                    <RouterLink to="/findPassword" class="text-subtitle-2">
+                    <RouterLink to="/reset/password" class="text-subtitle-2">
                         비밀번호 찾기
                     </RouterLink>
                     <RouterLink to="/register" class="text-subtitle-2">
